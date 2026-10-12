@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     embedding_base_url: str = "https://api.openai.com/v1"
     embedding_model: str = "text-embedding-3-small"
     embedding_timeout: float = Field(default=30, gt=0, le=120)
+    completion_api_key: str = Field(default="", repr=False)
+    completion_model: str = "gpt-4o-mini"
+    completion_timeout: float = Field(default=30, gt=0, le=120)
+    completion_max_tokens: int = Field(default=800, ge=1, le=4000)
+    query_max_distance: float = Field(default=0.5, ge=0, le=2)
+    query_match_limit: int = Field(default=5, ge=1, le=20)
+    query_max_chars: int = Field(default=2000, ge=1, le=8000)
 
     @field_validator("app_env", mode="before")
     @classmethod
@@ -100,13 +107,22 @@ class Settings(BaseSettings):
             return stripped
         return value
 
-    @field_validator("embedding_model", mode="before")
+    @field_validator("completion_api_key", mode="before")
     @classmethod
-    def normalize_embedding_model(cls, value: object) -> object:
+    def normalize_completion_api_key(cls, value: object) -> object:
+        if isinstance(value, str):
+            if any(character in value for character in "\r\n"):
+                raise ValueError("COMPLETION_API_KEY is invalid")
+            return value.strip()
+        return value
+
+    @field_validator("embedding_model", "completion_model", mode="before")
+    @classmethod
+    def normalize_model_name(cls, value: object) -> object:
         if isinstance(value, str):
             stripped = value.strip()
             if stripped == "" or any(character.isspace() for character in stripped):
-                raise ValueError("EMBEDDING_MODEL must be a single token")
+                raise ValueError("model name must be a single token")
             return stripped
         return value
 

@@ -8,10 +8,12 @@ import pytest
 from nexo_ai.domain.documents import EmbeddingFailed
 from nexo_ai.infrastructure.persistence.documents import (
     _as_datetime,
+    _as_float,
     _as_int,
     _as_str,
     _as_uuid,
     _to_document,
+    _to_reference,
     _vector_literal,
 )
 
@@ -50,3 +52,18 @@ def test_row_conversion_rejects_corrupt_values() -> None:
         _as_uuid(1)
     with pytest.raises(TypeError):
         _as_datetime("2026-10-12")
+    with pytest.raises(TypeError, match="distância"):
+        _as_float(True)
+    with pytest.raises(TypeError, match="distância"):
+        _as_float(float("nan"))
+    reference = _to_reference(
+        {
+            "document_id": document_id,
+            "filename": "notas.md",
+            "position": 0,
+            "content": "prazo",
+            "distance": 0.25,
+        }
+    )
+    assert reference.document_id == document_id
+    assert reference.distance == 0.25

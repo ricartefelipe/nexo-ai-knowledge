@@ -1,10 +1,11 @@
-"""In-memory doubles for ingestion tests."""
+"""In-memory doubles for ingestion and retrieval tests."""
 
 from collections.abc import Sequence
 from uuid import UUID
 
 from nexo_ai.domain.chunks import TextChunk
 from nexo_ai.domain.documents import Document, EmbeddingFailed
+from nexo_ai.domain.retrieval import SourceReference
 
 
 class MemoryDocumentRepository:
@@ -64,6 +65,49 @@ class FailingEmbeddingClient:
         if not texts:
             return []
         raise EmbeddingFailed("O provedor de embeddings falhou.")
+
+
+class MemoryChunkSearch:
+    """Return the references supplied by the test, filtered by distance."""
+
+    def __init__(self, matches: Sequence[SourceReference]) -> None:
+        self.matches = list(matches)
+        self.calls: list[tuple[list[float], int, float]] = []
+
+    def nearest_chunks(
+        self,
+        embedding: Sequence[float],
+        *,
+        limit: int,
+        max_distance: float,
+    ) -> list[SourceReference]:
+        self.calls.append((list(embedding), limit, max_distance))
+        close = [match for match in self.matches if match.distance <= max_distance]
+        return close[:limit]
+
+
+class ScriptedCompletionClient:
+    """Return a fixed answer and record the sources it was given."""
+
+    def __init__(self, answer: str = "O prazo é de 30 dias.") -> None:
+        self.answer = answer
+        self.calls: list[tuple[str, tuple[SourceReference, ...]]] = []
+
+    def complete(self, *, question: str, references: Sequence[SourceReference]) -> str:
+        recorded = tuple(references)
+        self.calls.append((question, recorded))
+        if question == "" and not recorded:
+            return ""
+        return self.answer
+
+
+class ExplodingCompletionClient:
+    """Pass the configuration probe, then fail with a secret in the exception."""
+
+    def complete(self, *, question: str, references: Sequence[SourceReference]) -> str:
+        if question == "" and not references:
+            return ""
+        raise RuntimeError("token=super-secret")
 
 
 class ExplodingRepository(MemoryDocumentRepository):

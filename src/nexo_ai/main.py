@@ -12,6 +12,7 @@ from nexo_ai.api.handlers.errors import register_exception_handlers
 from nexo_ai.api.middleware.correlation import RequestContextMiddleware
 from nexo_ai.api.routes.documents import router as document_router
 from nexo_ai.api.routes.health import router as health_router
+from nexo_ai.api.routes.interface import router as interface_router
 from nexo_ai.api.routes.queries import router as query_router
 from nexo_ai.application.ingest import IngestDocument
 from nexo_ai.application.retrieve import AnswerQuestion
@@ -84,15 +85,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         lifespan=lifespan,
         description=(
-            "Plataforma de conhecimento corporativo. A API verifica a saúde do processo, "
-            "ingere PDF, Markdown e TXT e responde perguntas com as fontes encontradas. "
-            "Ingestão e consulta exigem provedor; a subida do processo não exige. "
-            "Não há autenticação: o uso previsto é local."
+            "Plataforma de conhecimento corporativo. A interface local e a API verificam "
+            "a saúde do processo, ingerem PDF, Markdown e TXT e respondem perguntas com "
+            "as fontes encontradas. Ingestão e consulta exigem provedor; a subida do "
+            "processo não exige. Não há autenticação: o uso previsto é local."
         ),
     )
     app.state.settings = resolved
     register_exception_handlers(app)
     app.add_middleware(RequestContextMiddleware)
+    app.include_router(interface_router)
     app.include_router(health_router)
     app.include_router(document_router)
     app.include_router(query_router)

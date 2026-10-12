@@ -1,6 +1,6 @@
 # Documentação
 
-Índice da versão 0.1.0, ainda não publicada. Cada documento descreve o que o repositório contém hoje.
+Índice da versão 0.2.0, ainda não publicada. Cada documento descreve o que o repositório contém hoje.
 
 ## Operação
 
@@ -11,18 +11,20 @@
 ## Arquitetura
 
 - [C4](architecture/c4.md) — contexto, contêineres e componentes que existem no processo.
-- [Decisões](adr/README.md) — monólito, persistência e subida sem provedor de modelo.
+- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor e ingestão.
 
 ## Código
 
 ```text
 src/nexo_ai/
   main.py                         composição do processo
+  domain/                         documento, fragmentos e transições de estado
+  application/                    caso de uso de ingestão
   config/                         configuração e logging
   api/                            rotas, erros, correlação e esquemas
-  infrastructure/persistence/     engine, sessão e prontidão
-migrations/                       Alembic; a revisão inicial habilita pgvector
-tests/unit/                       configuração, logging e sondas
+  infrastructure/                 extração, embeddings, engine e prontidão
+migrations/                       Alembic; pgvector e tabelas de documento
+tests/unit/                       regras, extração e cliente de embeddings
 tests/api/                        contrato HTTP
 tests/integration/                PostgreSQL real
 ```

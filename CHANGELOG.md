@@ -2,6 +2,14 @@
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As versões abaixo descrevem o estado do código. Uma entrada aqui não significa que a tag ou a release tenha sido publicada.
 
+## [0.2.0] - Unreleased
+
+### Added
+
+- Ingestão de PDF textual, Markdown e TXT com estados persistidos: recebido, extraído, fragmentado, indexado ou falha.
+- Fragmentação determinística e embeddings `vector(1536)` do modelo `text-embedding-3-small`.
+- `POST /api/v1/documents` e `GET /api/v1/documents/{id}`.
+
 ## [0.1.0] - Unreleased
 
 ### Added

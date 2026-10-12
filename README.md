@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.4.0 ainda não publicada**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis e a interface local sobre essa API. A 0.1.0, a 0.2.0 e a 0.3.0 estão integradas em `develop` e também não foram publicadas.
+Nesta versão, **0.4.0 publicada em `main`**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis e a interface local sobre essa API. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte dessa publicação e não têm tag própria.
 
 ## Problema
 
@@ -153,7 +153,7 @@ uv run pre-commit run --all-files
 - A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`. Não há índice ANN.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- As versões 0.1.0, 0.2.0, 0.3.0 e 0.4.0 ainda não foram publicadas como release.
+- A tag publicada é `v0.4.0`. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
 
 ## Roadmap
 

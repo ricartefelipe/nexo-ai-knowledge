@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.2.0 ainda não publicada**, o repositório entrega a fundação e a ingestão de documentos: configuração validada, API HTTP, PostgreSQL com pgvector, logging estruturado, verificações de saúde e o recebimento de PDF, Markdown e TXT. Ainda não há busca semântica nem geração de respostas. A 0.1.0 está integrada em `develop` e também não foi publicada.
+Nesta versão, **0.3.0 ainda não publicada**, o repositório entrega a fundação, a ingestão de documentos e a consulta em linguagem natural com fontes verificáveis. A 0.1.0 e a 0.2.0 estão integradas em `develop` e também não foram publicadas.
 
 ## Problema
 
@@ -18,10 +18,11 @@ Informações organizacionais ficam espalhadas em documentos e registros. Pessoa
 - Expõe liveness e readiness com significados distintos.
 - Recebe PDF, Markdown e TXT, fragmenta o texto e grava embeddings quando `EMBEDDING_API_KEY` está configurada.
 - Persiste o estágio do documento: recebido, extraído, fragmentado, indexado ou falha.
+- Responde uma pergunta a partir dos fragmentos indexados e devolve esses fragmentos junto da resposta.
 
 ## Arquitetura
 
-O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main.py`. A configuração não depende de FastAPI. A rota de saúde não executa SQL; ela consulta uma sonda de prontidão. A ingestão passa pelo caso de uso em `application`, que aplica as transições de `domain` e usa a extração, o cliente de embeddings e o repositório da infraestrutura.
+O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main.py`. A configuração não depende de FastAPI. A rota de saúde não executa SQL; ela consulta uma sonda de prontidão. A ingestão e a consulta passam pelos casos de uso em `application`. A consulta gera o vetor da pergunta, busca os fragmentos mais próximos pela distância de cosseno e só chama o modelo de linguagem quando existe fonte dentro do limite configurado. As referências saem do banco, não do texto gerado.
 
 O mapa da documentação está em [docs/README.md](docs/README.md). Os diagramas estão em [docs/architecture/c4.md](docs/architecture/c4.md) e as decisões em [docs/adr/README.md](docs/adr/README.md). O fluxo de branches está em [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -53,7 +54,7 @@ uv sync --frozen --all-groups
 cp .env.example .env
 ```
 
-O arquivo `.env.example` contém apenas valores locais. A aplicação ignora variáveis desconhecidas. Sem `EMBEDDING_API_KEY`, o processo sobe e a ingestão responde que o provedor não está configurado.
+O arquivo `.env.example` contém apenas valores locais. A aplicação ignora variáveis desconhecidas. Sem `EMBEDDING_API_KEY`, o processo sobe e a ingestão e a consulta respondem que o provedor de embeddings não está configurado. Sem `COMPLETION_API_KEY`, a consulta responde que o provedor de linguagem não está configurado. As duas chaves são independentes e usam o mesmo `EMBEDDING_BASE_URL`.
 
 `APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces. O padrão de desenvolvimento escuta em `127.0.0.1`.
 
@@ -84,6 +85,7 @@ Não há autenticação. Esta API não está pronta para exposição pública.
 - `GET /health/ready` — o PostgreSQL responde e a extensão `vector` está instalada.
 - `POST /api/v1/documents` — envia um arquivo no campo `file`. PDF, Markdown ou TXT.
 - `GET /api/v1/documents/{id}` — mostra o estágio da ingestão, sem o texto dos fragmentos e sem os vetores.
+- `POST /api/v1/queries` — corpo `{"question": "..."}`. Responde com `answer`, `grounded` e `references`.
 
 O contrato interativo está em `/docs`.
 
@@ -91,7 +93,12 @@ O contrato interativo está em `/docs`.
 curl -fsS http://127.0.0.1:8000/health/live
 curl -fsS -D - http://127.0.0.1:8000/health/ready
 curl -fsS -F "file=@notas.md;type=text/markdown" http://127.0.0.1:8000/api/v1/documents
+curl -fsS -H "Content-Type: application/json" \
+  -d '{"question":"qual o prazo?"}' \
+  http://127.0.0.1:8000/api/v1/queries
 ```
+
+Quando nenhum fragmento indexado fica dentro de `QUERY_MAX_DISTANCE`, a resposta é `200`, `grounded` é `false`, `references` fica vazio e o modelo de linguagem não é chamado. O texto fixo é `As fontes indexadas não respondem a essa pergunta.` Quando há fonte, cada referência traz `document_id`, `filename`, `position`, `content` e `distance`. A consulta não é gravada.
 
 O cabeçalho `X-Request-ID` é aceito quando contém de 1 a 128 caracteres seguros. Caso contrário, a aplicação gera um UUID e o devolve na resposta. O mesmo identificador entra nos logs da requisição.
 
@@ -138,16 +145,16 @@ uv run pre-commit run --all-files
 ## Limitações
 
 - Não há autenticação, autorização nem multitenancy.
-- Não há busca semântica nem resposta fundamentada.
+- Não há interface. A consulta é só a API.
+- Uma resposta sem fonte próxima não inventa citação.
 - PDF digitalizado, sem texto, é recusado. Não há OCR.
-- A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`.
+- A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`. Não há índice ANN.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- As versões 0.1.0 e 0.2.0 ainda não foram publicadas como release.
+- As versões 0.1.0, 0.2.0 e 0.3.0 ainda não foram publicadas como release.
 
 ## Roadmap
 
-1. **v0.3.0 — Recuperação:** consulta em linguagem natural, busca vetorial e resposta com referências verificáveis.
-2. **v0.4.0 — Experiência:** interface sobre os contratos estáveis da API.
+1. **v0.4.0 — Experiência:** interface sobre os contratos estáveis da API.
 
 Recuperação híbrida, reranking, autenticação e processamento assíncrono ficam para quando houver requisito concreto.

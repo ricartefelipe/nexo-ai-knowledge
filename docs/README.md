@@ -1,6 +1,6 @@
 # Documentação
 
-Índice da versão 0.2.0, ainda não publicada. Cada documento descreve o que o repositório contém hoje.
+Índice da versão 0.3.0, ainda não publicada. Cada documento descreve o que o repositório contém hoje.
 
 ## Operação
 
@@ -11,22 +11,20 @@
 ## Arquitetura
 
 - [C4](architecture/c4.md) — contexto, contêineres e componentes que existem no processo.
-- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor e ingestão.
+- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor, ingestão e consulta fundamentada.
 
 ## Código
 
 ```text
 src/nexo_ai/
   main.py                         composição do processo
-  domain/                         documento, fragmentos e transições de estado
-  application/                    caso de uso de ingestão
+  domain/                         documento, fragmentos e resposta fundamentada
+  application/                    ingestão e consulta
   config/                         configuração e logging
   api/                            rotas, erros, correlação e esquemas
-  infrastructure/                 extração, embeddings, engine e prontidão
+  infrastructure/                 extração, embeddings, linguagem, engine e prontidão
 migrations/                       Alembic; pgvector e tabelas de documento
-tests/unit/                       regras, extração e cliente de embeddings
+tests/unit/                       regras, extração, embeddings e linguagem
 tests/api/                        contrato HTTP
 tests/integration/                PostgreSQL real
 ```
-
-Não há pacote de domínio nem de aplicação nesta versão. Essas camadas entram quando houver regra de negócio para proteger.

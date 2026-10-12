@@ -2,6 +2,14 @@
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As versões abaixo descrevem o estado do código. Uma entrada aqui não significa que a tag ou a release tenha sido publicada.
 
+## [0.3.0] - Unreleased
+
+### Added
+
+- `POST /api/v1/queries` responde uma pergunta a partir dos fragmentos indexados.
+- Busca pelos vizinhos mais próximos com a distância de cosseno em `vector(1536)`.
+- Resposta fundamentada com referências lidas do banco. Sem fonte próxima, a resposta não cita nada e o modelo de linguagem não é chamado.
+
 ## [0.2.0] - Unreleased
 
 ### Added

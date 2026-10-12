@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito. A 0.2.0 acrescentou as tabelas de documento e a coluna `vector(1536)`. A escolha de PostgreSQL, pgvector e SQLAlchemy síncrono permanece. Veja a [ADR 0004](0004-document-ingestion.md).
+Aceito. A 0.2.0 acrescentou as tabelas de documento e a coluna `vector(1536)`. A 0.3.0 consulta essa coluna pela distância de cosseno, sem migration nova. A escolha de PostgreSQL, pgvector e SQLAlchemy síncrono permanece. Veja a [ADR 0005](0005-grounded-retrieval.md).
 
 ## Contexto
 

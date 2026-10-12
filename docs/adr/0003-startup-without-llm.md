@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito. A ingestão da 0.2.0 falha de forma explícita quando falta a chave de embeddings e não impede a subida do processo. Veja a [ADR 0004](0004-document-ingestion.md).
+Aceito. A ingestão da 0.2.0 falha de forma explícita quando falta a chave de embeddings. A consulta da 0.3.0 faz o mesmo para embeddings e para `COMPLETION_API_KEY`. Nenhuma das duas impede a subida do processo. Veja a [ADR 0005](0005-grounded-retrieval.md).
 
 ## Contexto
 

@@ -1,15 +1,15 @@
 # Changelog
 
-O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As versões abaixo descrevem o estado do código. Uma entrada aqui não significa que a tag ou a release tenha sido publicada.
+O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A tag `v0.4.0` é a primeira publicação. As versões 0.1.0, 0.2.0 e 0.3.0 fazem parte dessa tag e não receberam tag própria.
 
-## [0.4.0] - Unreleased
+## [0.4.0] - 2026-10-12
 
 ### Added
 
 - Página local em `/` para indexar um documento, ver o estágio e perguntar com as fontes devolvidas pela API.
 - Folha de estilo e script empacotados em `/assets`, sem passo de build e sem serviço separado.
 
-## [0.3.0] - Unreleased
+## [0.3.0] - 2026-10-12
 
 ### Added
 
@@ -17,7 +17,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As 
 - Busca pelos vizinhos mais próximos com a distância de cosseno em `vector(1536)`.
 - Resposta fundamentada com referências lidas do banco. Sem fonte próxima, a resposta não cita nada e o modelo de linguagem não é chamado.
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-10-12
 
 ### Added
 
@@ -25,7 +25,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As 
 - Fragmentação determinística e embeddings `vector(1536)` do modelo `text-embedding-3-small`.
 - `POST /api/v1/documents` e `GET /api/v1/documents/{id}`.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-12
 
 ### Added
 

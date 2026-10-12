@@ -80,4 +80,5 @@ def test_openapi_exposes_the_implemented_routes() -> None:
         "/health/ready",
         "/api/v1/documents",
         "/api/v1/documents/{document_id}",
+        "/api/v1/queries",
     }

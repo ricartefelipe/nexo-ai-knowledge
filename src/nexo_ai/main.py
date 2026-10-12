@@ -12,9 +12,12 @@ from nexo_ai.api.handlers.errors import register_exception_handlers
 from nexo_ai.api.middleware.correlation import RequestContextMiddleware
 from nexo_ai.api.routes.documents import router as document_router
 from nexo_ai.api.routes.health import router as health_router
+from nexo_ai.api.routes.queries import router as query_router
 from nexo_ai.application.ingest import IngestDocument
+from nexo_ai.application.retrieve import AnswerQuestion
 from nexo_ai.config.logging import configure_logging
 from nexo_ai.config.settings import Settings, get_settings
+from nexo_ai.infrastructure.completions.openai import build_completion_client
 from nexo_ai.infrastructure.embeddings.openai import EMBEDDING_DIMENSIONS, build_embedding_client
 from nexo_ai.infrastructure.extraction.text import extract_document
 from nexo_ai.infrastructure.persistence.database import create_db_engine, create_session_factory
@@ -39,13 +42,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.readiness_probe = DatabaseReadinessProbe(engine)
         repository = SqlDocumentRepository(session_factory)
         app.state.document_repository = repository
+        embeddings = build_embedding_client(resolved)
         app.state.ingest_document = IngestDocument(
             repository=repository,
-            embeddings=build_embedding_client(resolved),
+            embeddings=embeddings,
             extract=extract_document,
             chunk_size=resolved.document_chunk_size,
             chunk_overlap=resolved.document_chunk_overlap,
             max_bytes=resolved.document_max_bytes,
+            dimensions=EMBEDDING_DIMENSIONS,
+        )
+        app.state.answer_question = AnswerQuestion(
+            search=repository,
+            embeddings=embeddings,
+            completion=build_completion_client(resolved),
+            max_distance=resolved.query_max_distance,
+            match_limit=resolved.query_match_limit,
+            max_chars=resolved.query_max_chars,
             dimensions=EMBEDDING_DIMENSIONS,
         )
         logger.info(
@@ -71,9 +84,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         lifespan=lifespan,
         description=(
-            "Plataforma de conhecimento corporativo. A API verifica a saúde do processo "
-            "e ingere PDF, Markdown e TXT. A ingestão exige um provedor de embeddings; "
-            "a subida do processo não exige. Não há autenticação: o uso previsto é local."
+            "Plataforma de conhecimento corporativo. A API verifica a saúde do processo, "
+            "ingere PDF, Markdown e TXT e responde perguntas com as fontes encontradas. "
+            "Ingestão e consulta exigem provedor; a subida do processo não exige. "
+            "Não há autenticação: o uso previsto é local."
         ),
     )
     app.state.settings = resolved
@@ -81,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health_router)
     app.include_router(document_router)
+    app.include_router(query_router)
     return app
 
 

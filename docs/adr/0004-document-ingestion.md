@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito
+Aceito. A consulta em linguagem natural chegou na 0.3.0 e não altera esta decisão. Veja a [ADR 0005](0005-grounded-retrieval.md).
 
 ## Contexto
 

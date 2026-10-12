@@ -41,6 +41,7 @@ def build_settings(
     db_connect_timeout: int = 5,
     embedding_api_key: str = "",
     embedding_base_url: str = "https://api.openai.com/v1",
+    completion_api_key: str = "",
     document_chunk_size: int = 1000,
     document_chunk_overlap: int = 200,
 ) -> Settings:
@@ -53,6 +54,7 @@ def build_settings(
         db_connect_timeout=db_connect_timeout,
         embedding_api_key=embedding_api_key,
         embedding_base_url=embedding_base_url,
+        completion_api_key=completion_api_key,
         document_chunk_size=document_chunk_size,
         document_chunk_overlap=document_chunk_overlap,
     )

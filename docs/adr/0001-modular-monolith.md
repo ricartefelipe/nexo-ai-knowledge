@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito. A 0.1.0 não tinha pacote de domínio. A 0.2.0 criou `domain` e `application` para a ingestão; a decisão do monólito permanece. Veja a [ADR 0004](0004-document-ingestion.md).
+Aceito. A 0.1.0 não tinha pacote de domínio. A 0.2.0 criou `domain` e `application` para a ingestão. A 0.3.0 acrescentou a consulta no mesmo processo. A decisão do monólito permanece. Veja a [ADR 0005](0005-grounded-retrieval.md).
 
 ## Contexto
 

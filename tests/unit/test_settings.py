@@ -131,8 +131,11 @@ def test_production_requires_host_password_and_specific_interface() -> None:
 
 
 def test_embedding_settings_hide_the_key_and_reject_bad_urls() -> None:
-    settings = build_settings(embedding_api_key="local-test-key")
+    settings = build_settings(
+        embedding_api_key="local-test-key", completion_api_key="completion-key"
+    )
     assert "local-test-key" not in repr(settings)
+    assert "completion-key" not in repr(settings)
     assert settings.embedding_model == "text-embedding-3-small"
     normalized = build_settings(embedding_base_url="https://example.test/v1/")
     assert normalized.embedding_base_url == "https://example.test/v1"

@@ -12,6 +12,7 @@ from sqlalchemy.sql.elements import TextClause
 
 from nexo_ai.domain.chunks import TextChunk
 from nexo_ai.domain.documents import Document, DocumentStatus, EmbeddingFailed
+from nexo_ai.domain.retrieval import SourceReference
 
 _SELECT_BY_HASH = """
     SELECT id, filename, media_type, content_sha256, byte_size, status,
@@ -24,6 +25,23 @@ _SELECT_BY_ID = """
            failure_detail, chunk_count, created_at, updated_at
     FROM documents
     WHERE id = :id
+"""
+_NEAREST_CHUNKS = """
+    SELECT document_id, filename, position, content, distance
+    FROM (
+        SELECT d.id AS document_id,
+               d.filename,
+               c.position,
+               c.content,
+               (c.embedding <=> CAST(:embedding AS vector)) AS distance
+        FROM document_chunks AS c
+        JOIN documents AS d ON d.id = c.document_id
+        WHERE d.status = 'embedded'
+          AND c.embedding IS NOT NULL
+    ) AS ranked
+    WHERE distance <= :max_distance
+    ORDER BY distance
+    LIMIT :limit
 """
 
 
@@ -112,6 +130,28 @@ class SqlDocumentRepository:
                     raise EmbeddingFailed("O fragmento não está disponível para receber o vetor.")
             session.commit()
 
+    def nearest_chunks(
+        self,
+        embedding: Sequence[float],
+        *,
+        limit: int,
+        max_distance: float,
+    ) -> list[SourceReference]:
+        with self._session_factory() as session:
+            rows = (
+                session.execute(
+                    text(_NEAREST_CHUNKS),
+                    {
+                        "embedding": _vector_literal(embedding),
+                        "max_distance": max_distance,
+                        "limit": limit,
+                    },
+                )
+                .mappings()
+                .all()
+            )
+        return [_to_reference(cast(Mapping[str, Any], row)) for row in rows]
+
     def _fetch(self, statement: str, params: Mapping[str, object]) -> Document | None:
         with self._session_factory() as session:
             row = session.execute(text(statement), params).mappings().one_or_none()
@@ -153,6 +193,24 @@ def _to_document(row: Mapping[str, Any]) -> Document:
         created_at=_as_datetime(row["created_at"]),
         updated_at=_as_datetime(row["updated_at"]),
     )
+
+
+def _to_reference(row: Mapping[str, Any]) -> SourceReference:
+    return SourceReference(
+        document_id=_as_uuid(row["document_id"]),
+        filename=_as_str(row["filename"]),
+        position=_as_int(row["position"]),
+        content=_as_str(row["content"]),
+        distance=_as_float(row["distance"]),
+    )
+
+
+def _as_float(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise TypeError("distância inválida")
+    if not math.isfinite(value):
+        raise TypeError("distância inválida")
+    return float(value)
 
 
 def _vector_literal(values: Sequence[float]) -> str:

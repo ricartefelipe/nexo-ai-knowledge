@@ -21,15 +21,11 @@ services:
   api:
     build:
       context: .
-    env_file:
-      - path: .env
-        required: false
     environment:
       APP_ENV: local
       APP_HOST: 0.0.0.0
       APP_PORT: "8000"
       LOG_LEVEL: INFO
-      # Dentro do Compose o banco se chama db. O .env do host não substitui esta URL.
       DATABASE_URL: postgresql+psycopg://nexo:nexo@db:5432/nexo
       DB_POOL_SIZE: "5"
       DB_MAX_OVERFLOW: "10"
@@ -38,9 +34,11 @@ services:
       DOCUMENT_MAX_BYTES: "10485760"
       DOCUMENT_CHUNK_SIZE: "1000"
       DOCUMENT_CHUNK_OVERLAP: "200"
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_BASE_URL: https://api.openai.com/v1
       EMBEDDING_MODEL: text-embedding-3-small
       EMBEDDING_TIMEOUT: "30"
+      COMPLETION_API_KEY: ${COMPLETION_API_KEY:-}
       COMPLETION_MODEL: gpt-4o-mini
       COMPLETION_TIMEOUT: "30"
       COMPLETION_MAX_TOKENS: "800"

@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.3.0 ainda não publicada**, o repositório entrega a fundação, a ingestão de documentos e a consulta em linguagem natural com fontes verificáveis. A 0.1.0 e a 0.2.0 estão integradas em `develop` e também não foram publicadas.
+Nesta versão, **0.4.0 ainda não publicada**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis e a interface local sobre essa API. A 0.1.0, a 0.2.0 e a 0.3.0 estão integradas em `develop` e também não foram publicadas.
 
 ## Problema
 
@@ -19,10 +19,11 @@ Informações organizacionais ficam espalhadas em documentos e registros. Pessoa
 - Recebe PDF, Markdown e TXT, fragmenta o texto e grava embeddings quando `EMBEDDING_API_KEY` está configurada.
 - Persiste o estágio do documento: recebido, extraído, fragmentado, indexado ou falha.
 - Responde uma pergunta a partir dos fragmentos indexados e devolve esses fragmentos junto da resposta.
+- Serve uma página local em `/` para enviar documentos, consultar o estágio e fazer perguntas. A página chama a API no mesmo processo.
 
 ## Arquitetura
 
-O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main.py`. A configuração não depende de FastAPI. A rota de saúde não executa SQL; ela consulta uma sonda de prontidão. A ingestão e a consulta passam pelos casos de uso em `application`. A consulta gera o vetor da pergunta, busca os fragmentos mais próximos pela distância de cosseno e só chama o modelo de linguagem quando existe fonte dentro do limite configurado. As referências saem do banco, não do texto gerado.
+O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main.py`. A configuração não depende de FastAPI. A rota de saúde não executa SQL; ela consulta uma sonda de prontidão. A ingestão e a consulta passam pelos casos de uso em `application`. A consulta gera o vetor da pergunta, busca os fragmentos mais próximos pela distância de cosseno e só chama o modelo de linguagem quando existe fonte dentro do limite configurado. As referências saem do banco, não do texto gerado. A página em `/` é HTML, CSS e JavaScript empacotados no processo; o navegador usa os mesmos contratos HTTP.
 
 O mapa da documentação está em [docs/README.md](docs/README.md). Os diagramas estão em [docs/architecture/c4.md](docs/architecture/c4.md) e as decisões em [docs/adr/README.md](docs/adr/README.md). O fluxo de branches está em [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -66,7 +67,7 @@ Subir a API e o PostgreSQL:
 docker compose up --build
 ```
 
-A API fica em `http://127.0.0.1:8000`. O banco fica em `127.0.0.1:5432`, com usuário, senha e base `nexo`. Essas credenciais servem somente ao ambiente local reproduzível.
+A interface fica em `http://127.0.0.1:8000/`. A API fica no mesmo endereço. O banco fica em `127.0.0.1:5432`, com usuário, senha e base `nexo`. Essas credenciais servem somente ao ambiente local reproduzível.
 
 O contêiner da API aplica `alembic upgrade head` antes de escutar. O healthcheck da imagem consulta `/health/live`. O healthcheck do Compose consulta `/health/ready`.
 
@@ -81,6 +82,7 @@ uv run python -m nexo_ai
 
 Não há autenticação. Esta API não está pronta para exposição pública.
 
+- `GET /` — página local. Não entra no OpenAPI.
 - `GET /health/live` — o processo responde. Não consulta o banco.
 - `GET /health/ready` — o PostgreSQL responde e a extensão `vector` está instalada.
 - `POST /api/v1/documents` — envia um arquivo no campo `file`. PDF, Markdown ou TXT.
@@ -145,16 +147,14 @@ uv run pre-commit run --all-files
 ## Limitações
 
 - Não há autenticação, autorização nem multitenancy.
-- Não há interface. A consulta é só a API.
+- A interface não lista o acervo. Ela mostra o documento enviado nesta página e a resposta da pergunta.
 - Uma resposta sem fonte próxima não inventa citação.
 - PDF digitalizado, sem texto, é recusado. Não há OCR.
 - A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`. Não há índice ANN.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- As versões 0.1.0, 0.2.0 e 0.3.0 ainda não foram publicadas como release.
+- As versões 0.1.0, 0.2.0, 0.3.0 e 0.4.0 ainda não foram publicadas como release.
 
 ## Roadmap
 
-1. **v0.4.0 — Experiência:** interface sobre os contratos estáveis da API.
-
-Recuperação híbrida, reranking, autenticação e processamento assíncrono ficam para quando houver requisito concreto.
+Recuperação híbrida, reranking, autenticação e processamento assíncrono ficam para quando houver requisito concreto. Não há próximo incremento aberto.

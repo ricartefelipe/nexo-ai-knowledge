@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito
+Aceito. A interface chegou na 0.4.0 e consome esta consulta sem alterar o contrato. Veja a [ADR 0006](0006-local-interface.md).
 
 ## Contexto
 

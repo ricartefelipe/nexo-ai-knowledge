@@ -9,3 +9,4 @@ Uma decisão aceita descreve o código desta versão. Quando uma decisão mudar,
 | [0003](0003-startup-without-llm.md) | A aplicação sobe sem provedor de modelo | Aceito |
 | [0004](0004-document-ingestion.md) | Ingestão com estados persistidos e embeddings | Aceito |
 | [0005](0005-grounded-retrieval.md) | Consulta fundamentada nos fragmentos indexados | Aceito |
+| [0006](0006-local-interface.md) | Interface local no mesmo processo | Aceito |

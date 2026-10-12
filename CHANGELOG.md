@@ -2,6 +2,13 @@
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As versões abaixo descrevem o estado do código. Uma entrada aqui não significa que a tag ou a release tenha sido publicada.
 
+## [0.4.0] - Unreleased
+
+### Added
+
+- Página local em `/` para indexar um documento, ver o estágio e perguntar com as fontes devolvidas pela API.
+- Folha de estilo e script empacotados em `/assets`, sem passo de build e sem serviço separado.
+
 ## [0.3.0] - Unreleased
 
 ### Added

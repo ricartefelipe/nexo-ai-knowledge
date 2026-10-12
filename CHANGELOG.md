@@ -2,6 +2,12 @@
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). A tag `v0.4.0` é a primeira publicação. As versões 0.1.0, 0.2.0 e 0.3.0 fazem parte dessa tag e não receberam tag própria.
 
+## [0.4.2] - 2026-10-12
+
+### Changed
+
+- `docker compose up --build` sobe o banco e a API sem criar arquivo.
+
 ## [0.4.1] - 2026-10-12
 
 ### Added

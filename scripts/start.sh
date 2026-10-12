@@ -9,11 +9,5 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -f .env ]; then
-  cp .env.example .env
-  printf '%s\n' "Arquivo .env criado a partir de .env.example."
-  printf '%s\n' "Preencha EMBEDDING_API_KEY e COMPLETION_API_KEY para indexar e perguntar."
-fi
-
 printf '%s\n' "A interface fica em http://127.0.0.1:8000/"
 exec docker compose up --build

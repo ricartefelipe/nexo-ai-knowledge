@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.4.1 publicada em `main`**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis, a interface local e o arranque com `./scripts/start.sh`. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte da tag `v0.4.0` e não têm tag própria.
+Nesta versão, **0.4.2 publicada em `main`**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis e a interface local. O arranque é `docker compose up --build`, sem criar arquivo. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte da tag `v0.4.0` e não têm tag própria.
 
 ## Problema
 
@@ -49,17 +49,15 @@ As versões resolvidas estão em `uv.lock`.
 
 ## Início
 
-Na raiz do repositório:
+Na raiz do repositório, sem criar arquivo:
 
 ```bash
-./scripts/start.sh
+docker compose up --build
 ```
 
-O script cria `.env` a partir de `.env.example` quando ele ainda não existe, sobe o PostgreSQL e a API, e aplica as migrations no contêiner. A interface fica em `http://127.0.0.1:8000/`. O banco fica em `127.0.0.1:5432`, com usuário, senha e base `nexo`.
+A interface fica em `http://127.0.0.1:8000/`. O mesmo comando está em `./scripts/start.sh`. O contêiner aplica as migrations. Sem chave de provedor, a página abre e a operação que precisar de chave avisa isso.
 
-Para indexar documentos, grave `EMBEDDING_API_KEY` no `.env`. Para gerar a resposta, grave também `COMPLETION_API_KEY`. As duas usam `EMBEDDING_BASE_URL`. Sem a chave, o processo continua no ar e a operação correspondente avisa que o provedor não está configurado. Reinicie o script depois de alterar o `.env`.
-
-O `.env` não entra no Git. `APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
+`APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
 
 ## Execução no host
 
@@ -149,7 +147,7 @@ uv run pre-commit run --all-files
 - A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`. Não há índice ANN.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- A tag atual é `v0.4.1`. A `v0.4.0` continua publicada. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
+- A tag atual é `v0.4.2`. As tags `v0.4.0` e `v0.4.1` continuam publicadas. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
 
 ## Roadmap
 

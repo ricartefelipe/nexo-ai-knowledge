@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.4.0 publicada em `main`**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis e a interface local sobre essa API. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte dessa publicação e não têm tag própria.
+Nesta versão, **0.4.1 publicada em `main`**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis, a interface local e o arranque com `./scripts/start.sh`. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte da tag `v0.4.0` e não têm tag própria.
 
 ## Problema
 
@@ -44,39 +44,35 @@ As versões resolvidas estão em `uv.lock`.
 
 ## Pré-requisitos
 
-- Python 3.12
-- [uv](https://docs.astral.sh/uv/) 0.13 ou superior
-- Docker com Docker Compose, para o banco e para a execução containerizada
+- Docker com Docker Compose
+- Python 3.12 e [uv](https://docs.astral.sh/uv/) 0.13 ou superior, somente para rodar a API fora do contêiner ou para executar a suíte
 
-## Configuração
+## Início
+
+Na raiz do repositório:
 
 ```bash
+./scripts/start.sh
+```
+
+O script cria `.env` a partir de `.env.example` quando ele ainda não existe, sobe o PostgreSQL e a API, e aplica as migrations no contêiner. A interface fica em `http://127.0.0.1:8000/`. O banco fica em `127.0.0.1:5432`, com usuário, senha e base `nexo`.
+
+Para indexar documentos, grave `EMBEDDING_API_KEY` no `.env`. Para gerar a resposta, grave também `COMPLETION_API_KEY`. As duas usam `EMBEDDING_BASE_URL`. Sem a chave, o processo continua no ar e a operação correspondente avisa que o provedor não está configurado. Reinicie o script depois de alterar o `.env`.
+
+O `.env` não entra no Git. `APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
+
+## Execução no host
+
+Com o banco do Compose já saudável:
+
+```bash
+docker compose up -d db
 uv sync --frozen --all-groups
-cp .env.example .env
-```
-
-O arquivo `.env.example` contém apenas valores locais. A aplicação ignora variáveis desconhecidas. Sem `EMBEDDING_API_KEY`, o processo sobe e a ingestão e a consulta respondem que o provedor de embeddings não está configurado. Sem `COMPLETION_API_KEY`, a consulta responde que o provedor de linguagem não está configurado. As duas chaves são independentes e usam o mesmo `EMBEDDING_BASE_URL`.
-
-`APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces. O padrão de desenvolvimento escuta em `127.0.0.1`.
-
-## Execução local
-
-Subir a API e o PostgreSQL:
-
-```bash
-docker compose up --build
-```
-
-A interface fica em `http://127.0.0.1:8000/`. A API fica no mesmo endereço. O banco fica em `127.0.0.1:5432`, com usuário, senha e base `nexo`. Essas credenciais servem somente ao ambiente local reproduzível.
-
-O contêiner da API aplica `alembic upgrade head` antes de escutar. O healthcheck da imagem consulta `/health/live`. O healthcheck do Compose consulta `/health/ready`.
-
-Para rodar o processo no host, com o banco do Compose já saudável:
-
-```bash
 uv run alembic upgrade head
 uv run python -m nexo_ai
 ```
+
+O healthcheck da imagem consulta `/health/live`. O healthcheck do Compose consulta `/health/ready`.
 
 ## API
 
@@ -153,7 +149,7 @@ uv run pre-commit run --all-files
 - A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`. Não há índice ANN.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- A tag publicada é `v0.4.0`. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
+- A tag atual é `v0.4.1`. A `v0.4.0` continua publicada. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
 
 ## Roadmap
 

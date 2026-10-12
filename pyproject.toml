@@ -1,6 +1,6 @@
 [project]
 name = "nexo-ai"
-version = "0.4.1"
+version = "0.4.2"
 description = "Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

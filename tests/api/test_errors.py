@@ -2,6 +2,7 @@
 
 from typing import cast
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.exceptions import HTTPException
@@ -69,10 +70,14 @@ def test_non_text_http_error_uses_a_generic_detail() -> None:
     assert "hidden" not in response.text
 
 
-def test_unhandled_exception_does_not_expose_the_message() -> None:
+def test_unhandled_exception_does_not_expose_the_message(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     app = _app_with_probe_routes()
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.get("/__test__/boom", headers={CORRELATION_ID_HEADER: "boom-1"})
+    captured = capsys.readouterr()
+    logs = captured.out + captured.err
     assert response.status_code == 500
     assert response.headers["content-type"].startswith("application/problem+json")
     problem = ProblemDetails.model_validate(response.json())
@@ -81,3 +86,6 @@ def test_unhandled_exception_does_not_expose_the_message() -> None:
     assert "super-secret" not in response.text
     assert "Traceback" not in response.text
     assert "RuntimeError" not in response.text
+    assert "super-secret" not in logs
+    assert "Traceback" not in logs
+    assert '"error_type": "RuntimeError"' in logs

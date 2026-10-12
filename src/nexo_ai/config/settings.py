@@ -7,6 +7,7 @@ from typing import Self
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import ArgumentError
 
 _WILDCARD_HOSTS = {"0.0.0.0", "::", "[::]"}  # noqa: S104
 _LOG_LEVELS = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"}
@@ -76,7 +77,7 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL is not a valid database URL")
         try:
             url = make_url(value)
-        except Exception as exc:
+        except ArgumentError as exc:
             raise ValueError("DATABASE_URL is not a valid database URL") from exc
         if url.drivername != _POSTGRES_DRIVER:
             raise ValueError("DATABASE_URL must use the postgresql+psycopg driver")

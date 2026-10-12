@@ -61,12 +61,13 @@ class RequestContextMiddleware:
 
         try:
             await self.app(scope, receive, send_with_correlation)
-        except Exception:
-            logger.exception(
+        except Exception as exc:
+            logger.error(
                 "request_failed",
                 component="nexo_ai.api",
                 operation="http_request",
                 result="error",
+                error_type=type(exc).__name__,
                 http_method=request.method,
                 http_path=request.url.path,
                 duration_ms=_elapsed_ms(started),

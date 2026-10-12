@@ -39,6 +39,8 @@ def build_problem(
 
 
 def problem_response(problem: ProblemDetails) -> JSONResponse:
+    """Return the problem document with the RFC 9457 media type."""
+
     return JSONResponse(
         status_code=problem.status,
         content=problem.model_dump(exclude_none=True),
@@ -104,7 +106,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected_exception(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception(
+        logger.error(
             "unhandled_exception",
             component="nexo_ai.api",
             operation="handle_exception",

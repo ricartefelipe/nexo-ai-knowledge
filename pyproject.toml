@@ -1,6 +1,6 @@
 [project]
 name = "nexo-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -10,6 +10,8 @@ dependencies = [
     "psycopg[binary]>=3.2,<4",
     "pydantic>=2.11,<3",
     "pydantic-settings>=2.10,<3",
+    "pypdf>=6,<7",
+    "python-multipart>=0.0.20,<1",
     "sqlalchemy>=2.1.4,<2.2",
     "structlog>=24.4,<26",
     "uvicorn[standard]>=0.32,<1",

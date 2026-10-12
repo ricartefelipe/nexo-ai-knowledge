@@ -130,6 +130,20 @@ def test_production_requires_host_password_and_specific_interface() -> None:
     assert settings.app_env is AppEnvironment.PRODUCTION
 
 
+def test_embedding_settings_hide_the_key_and_reject_bad_urls() -> None:
+    settings = build_settings(embedding_api_key="local-test-key")
+    assert "local-test-key" not in repr(settings)
+    assert settings.embedding_model == "text-embedding-3-small"
+    normalized = build_settings(embedding_base_url="https://example.test/v1/")
+    assert normalized.embedding_base_url == "https://example.test/v1"
+    with pytest.raises(ValidationError):
+        build_settings(embedding_base_url="ftp://example.test/v1")
+    with pytest.raises(ValidationError):
+        build_settings(embedding_api_key="secret\nvalue")
+    with pytest.raises(ValidationError):
+        build_settings(document_chunk_size=200, document_chunk_overlap=200)
+
+
 def test_local_environment_may_bind_all_interfaces() -> None:
     settings = build_settings(app_env="local", app_host="0.0.0.0")
     assert settings.app_host == "0.0.0.0"

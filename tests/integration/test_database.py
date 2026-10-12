@@ -1,14 +1,11 @@
 """PostgreSQL and pgvector integration."""
 
-import os
-
 import pytest
 from alembic import command
 from alembic.config import Config
 from alembic.util.exc import CommandError
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -19,19 +16,7 @@ from tests.conftest import build_settings
 
 pytestmark = pytest.mark.integration
 
-_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "db"}
-_REVISION = "0001_enable_pgvector"
-
-
-@pytest.fixture(scope="session")
-def database_url() -> str:
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        pytest.fail("DATABASE_URL is required for integration tests")
-    host = make_url(url).host
-    if host not in _LOCAL_HOSTS:
-        pytest.fail("Integration tests refuse to run against a non-local database host")
-    return url
+_REVISION = "0002_create_documents"
 
 
 def _alembic_config() -> Config:

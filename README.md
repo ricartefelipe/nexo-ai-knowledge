@@ -49,17 +49,15 @@ As versões resolvidas estão em `uv.lock`.
 
 ## Início
 
-Na raiz do repositório:
+Na raiz do repositório, sem criar arquivo:
 
 ```bash
-./scripts/start.sh
+docker compose up --build
 ```
 
-O script cria `.env` a partir de `.env.example` quando ele ainda não existe, sobe o PostgreSQL e a API, e aplica as migrations no contêiner. A interface fica em `http://127.0.0.1:8000/`. O banco fica em `127.0.0.1:5432`, com usuário, senha e base `nexo`.
+A interface fica em `http://127.0.0.1:8000/`. O mesmo comando está em `./scripts/start.sh`. O contêiner aplica as migrations. Sem chave de provedor, a página abre e a operação que precisar de chave avisa isso.
 
-Para indexar documentos, grave `EMBEDDING_API_KEY` no `.env`. Para gerar a resposta, grave também `COMPLETION_API_KEY`. As duas usam `EMBEDDING_BASE_URL`. Sem a chave, o processo continua no ar e a operação correspondente avisa que o provedor não está configurado. Reinicie o script depois de alterar o `.env`.
-
-O `.env` não entra no Git. `APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
+`APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
 
 ## Execução no host
 

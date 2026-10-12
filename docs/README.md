@@ -1,6 +1,6 @@
 # Documentação
 
-Índice da versão 0.3.0, ainda não publicada. Cada documento descreve o que o repositório contém hoje.
+Índice da versão 0.4.0, ainda não publicada. Cada documento descreve o que o repositório contém hoje.
 
 ## Operação
 
@@ -11,7 +11,7 @@
 ## Arquitetura
 
 - [C4](architecture/c4.md) — contexto, contêineres e componentes que existem no processo.
-- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor, ingestão e consulta fundamentada.
+- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor, ingestão, consulta fundamentada e interface local.
 
 ## Código
 
@@ -22,6 +22,7 @@ src/nexo_ai/
   application/                    ingestão e consulta
   config/                         configuração e logging
   api/                            rotas, erros, correlação e esquemas
+  interface/                      página, estilo e script empacotados
   infrastructure/                 extração, embeddings, linguagem, engine e prontidão
 migrations/                       Alembic; pgvector e tabelas de documento
 tests/unit/                       regras, extração, embeddings e linguagem

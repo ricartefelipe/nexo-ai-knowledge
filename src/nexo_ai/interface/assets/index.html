@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nexo AI</title>
+    <link rel="stylesheet" href="/assets/app.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <p class="mark">Nexo AI</p>
+      <h1>Conhecimento com fonte verificável</h1>
+      <p class="lede">
+        Envie um PDF, Markdown ou TXT e pergunte sobre o que foi indexado.
+        A resposta mostra os trechos usados. Sem trecho próximo, nada é citado.
+      </p>
+      <p id="readiness" class="readiness" role="status">Verificando o banco…</p>
+    </header>
+    <main class="workspace">
+      <section class="panel" aria-labelledby="document-title">
+        <h2 id="document-title">Documento</h2>
+        <form id="upload-form">
+          <label for="file">Arquivo</label>
+          <input id="file" name="file" type="file" accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain">
+          <button id="upload-button" type="submit">Indexar</button>
+        </form>
+        <div id="document-result" aria-live="polite"></div>
+      </section>
+      <section class="panel" aria-labelledby="query-title">
+        <h2 id="query-title">Pergunta</h2>
+        <form id="query-form">
+          <label for="question">O que você quer saber?</label>
+          <textarea id="question" name="question" rows="5"></textarea>
+          <button id="query-button" type="submit">Consultar</button>
+        </form>
+        <div id="query-result" aria-live="polite"></div>
+      </section>
+    </main>
+    <footer class="colophon">
+      <p>Uso local, sem autenticação. A interface não grava a pergunta.</p>
+    </footer>
+    <noscript>
+      <p class="noscript">Esta página precisa de JavaScript para falar com a API.</p>
+    </noscript>
+    <script src="/assets/app.js"></script>
+  </body>
+</html>

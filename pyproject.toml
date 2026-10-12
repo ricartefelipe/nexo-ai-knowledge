@@ -1,6 +1,6 @@
 [project]
 name = "nexo-ai"
-version = "0.3.0"
+version = "0.4.0"
 description = "Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -34,6 +34,16 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nexo_ai"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/nexo_ai/interface/assets/index.html" = "nexo_ai/interface/assets/index.html"
+"src/nexo_ai/interface/assets/app.css" = "nexo_ai/interface/assets/app.css"
+"src/nexo_ai/interface/assets/app.js" = "nexo_ai/interface/assets/app.js"
+
+[tool.hatch.build.targets.sdist.force-include]
+"src/nexo_ai/interface/assets/index.html" = "src/nexo_ai/interface/assets/index.html"
+"src/nexo_ai/interface/assets/app.css" = "src/nexo_ai/interface/assets/app.css"
+"src/nexo_ai/interface/assets/app.js" = "src/nexo_ai/interface/assets/app.js"
 
 [tool.uv]
 package = true

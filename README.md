@@ -23,7 +23,7 @@ O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main
 
 Não há pacote de domínio nesta versão. As regras de documento, fragmento e consulta entram na ingestão, quando existir invariante de negócio para proteger.
 
-Os diagramas e as decisões estão em [docs/architecture/c4.md](docs/architecture/c4.md) e em [docs/adr](docs/adr).
+O mapa da documentação está em [docs/README.md](docs/README.md). Os diagramas estão em [docs/architecture/c4.md](docs/architecture/c4.md) e as decisões em [docs/adr/README.md](docs/adr/README.md). O fluxo de branches está em [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Tecnologias
 

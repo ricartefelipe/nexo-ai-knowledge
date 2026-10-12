@@ -13,6 +13,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gitflow:
+    name: gitflow
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate branch names
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -eu
+          case "$HEAD_REF" in
+            feature/*)
+              expected_bases="develop"
+              ;;
+            release/*|hotfix/*)
+              expected_bases="main develop"
+              ;;
+            *)
+              printf 'A branch %s está fora do GitFlow. Use feature/*, release/* ou hotfix/*.\n' "$HEAD_REF" >&2
+              exit 1
+              ;;
+          esac
+          valid=0
+          for base in $expected_bases; do
+            if [ "$BASE_REF" = "$base" ]; then
+              valid=1
+            fi
+          done
+          if [ "$valid" -ne 1 ]; then
+            printf 'A base %s não é destino válido para %s.\n' "$BASE_REF" "$HEAD_REF" >&2
+            exit 1
+          fi
+
   quality:
     name: quality
     runs-on: ubuntu-24.04

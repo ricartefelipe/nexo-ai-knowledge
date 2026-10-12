@@ -13,3 +13,11 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). As 
 - Migration inicial que habilita a extensão `vector` no PostgreSQL 16.
 - Imagem de container, Compose local e pipeline de qualidade e integração.
 - Testes de unidade, API e integração com PostgreSQL e pgvector.
+
+### Changed
+
+- O fluxo de contribuição aceita somente `feature/*`, `release/*` e `hotfix/*`, integra com merge commit e apaga a branch de trabalho depois do merge.
+
+### Fixed
+
+- Falha não tratada registra somente o tipo da exceção. A mensagem não entra no log nem na resposta.

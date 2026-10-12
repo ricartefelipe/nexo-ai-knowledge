@@ -1,6 +1,6 @@
 # Documentação
 
-Índice da versão 0.4.0, publicada em `main`. Cada documento descreve o que o repositório contém hoje.
+Índice da versão 0.4.1, publicada em `main`. Cada documento descreve o que o repositório contém hoje.
 
 ## Operação
 

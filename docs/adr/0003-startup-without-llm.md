@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito
+Aceito. A ingestão da 0.2.0 falha de forma explícita quando falta a chave de embeddings e não impede a subida do processo. Veja a [ADR 0004](0004-document-ingestion.md).
 
 ## Contexto
 

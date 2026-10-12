@@ -70,9 +70,14 @@ def test_correlation_id_is_generated_when_the_header_is_unsafe() -> None:
     assert " " not in generated
 
 
-def test_openapi_exposes_only_the_health_contract() -> None:
+def test_openapi_exposes_the_implemented_routes() -> None:
     app = create_app(build_settings())
     with TestClient(app) as client:
         document = client.get("/openapi.json")
     assert document.status_code == 200
-    assert set(document.json()["paths"]) == {"/health/live", "/health/ready"}
+    assert set(document.json()["paths"]) == {
+        "/health/live",
+        "/health/ready",
+        "/api/v1/documents",
+        "/api/v1/documents/{document_id}",
+    }

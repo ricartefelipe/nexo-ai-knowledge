@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.1.0 ainda não publicada**, o repositório entrega a fundação executável: configuração validada, API HTTP, PostgreSQL com pgvector, logging estruturado e verificações de saúde. Ainda não há ingestão de documentos, busca semântica nem geração de respostas.
+Nesta versão, **0.2.0 ainda não publicada**, o repositório entrega a fundação e a ingestão de documentos: configuração validada, API HTTP, PostgreSQL com pgvector, logging estruturado, verificações de saúde e o recebimento de PDF, Markdown e TXT. Ainda não há busca semântica nem geração de respostas. A 0.1.0 está integrada em `develop` e também não foi publicada.
 
 ## Problema
 
@@ -14,14 +14,14 @@ Informações organizacionais ficam espalhadas em documentos e registros. Pessoa
 - Valida a configuração do processo antes de atender requisições.
 - Registra logs JSON com identificador de correlação.
 - Responde erros HTTP como problem details (RFC 9457), sem stack trace.
-- Executa a migration inicial, que habilita a extensão `vector` no PostgreSQL.
+- Executa as migrations, que habilitam a extensão `vector` e criam as tabelas de documento.
 - Expõe liveness e readiness com significados distintos.
+- Recebe PDF, Markdown e TXT, fragmenta o texto e grava embeddings quando `EMBEDDING_API_KEY` está configurada.
+- Persiste o estágio do documento: recebido, extraído, fragmentado, indexado ou falha.
 
 ## Arquitetura
 
-O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main.py`. A configuração não depende de FastAPI. A rota de saúde não executa SQL; ela consulta uma sonda de prontidão. A sonda e o engine SQLAlchemy ficam na infraestrutura.
-
-Não há pacote de domínio nesta versão. As regras de documento, fragmento e consulta entram na ingestão, quando existir invariante de negócio para proteger.
+O processo é um monólito modular. O ponto de composição é `src/nexo_ai/main.py`. A configuração não depende de FastAPI. A rota de saúde não executa SQL; ela consulta uma sonda de prontidão. A ingestão passa pelo caso de uso em `application`, que aplica as transições de `domain` e usa a extração, o cliente de embeddings e o repositório da infraestrutura.
 
 O mapa da documentação está em [docs/README.md](docs/README.md). Os diagramas estão em [docs/architecture/c4.md](docs/architecture/c4.md) e as decisões em [docs/adr/README.md](docs/adr/README.md). O fluxo de branches está em [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -31,7 +31,8 @@ O mapa da documentação está em [docs/README.md](docs/README.md). Os diagramas
 - FastAPI, Pydantic e Pydantic Settings
 - SQLAlchemy 2 síncrono e psycopg 3
 - Alembic
-- PostgreSQL 16 com pgvector 0.8.7
+- PostgreSQL 16 com pgvector 0.8.7 e a coluna `vector(1536)`
+- pypdf, para texto de PDF
 - structlog
 - uv 0.13
 - pytest, Ruff e Mypy
@@ -52,7 +53,7 @@ uv sync --frozen --all-groups
 cp .env.example .env
 ```
 
-O arquivo `.env.example` contém apenas credenciais locais. A aplicação ignora variáveis desconhecidas e não lê chave de LLM.
+O arquivo `.env.example` contém apenas valores locais. A aplicação ignora variáveis desconhecidas. Sem `EMBEDDING_API_KEY`, o processo sobe e a ingestão responde que o provedor não está configurado.
 
 `APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces. O padrão de desenvolvimento escuta em `127.0.0.1`.
 
@@ -81,12 +82,15 @@ Não há autenticação. Esta API não está pronta para exposição pública.
 
 - `GET /health/live` — o processo responde. Não consulta o banco.
 - `GET /health/ready` — o PostgreSQL responde e a extensão `vector` está instalada.
+- `POST /api/v1/documents` — envia um arquivo no campo `file`. PDF, Markdown ou TXT.
+- `GET /api/v1/documents/{id}` — mostra o estágio da ingestão, sem o texto dos fragmentos e sem os vetores.
 
 O contrato interativo está em `/docs`.
 
 ```bash
 curl -fsS http://127.0.0.1:8000/health/live
 curl -fsS -D - http://127.0.0.1:8000/health/ready
+curl -fsS -F "file=@notas.md;type=text/markdown" http://127.0.0.1:8000/api/v1/documents
 ```
 
 O cabeçalho `X-Request-ID` é aceito quando contém de 1 a 128 caracteres seguros. Caso contrário, a aplicação gera um UUID e o devolve na resposta. O mesmo identificador entra nos logs da requisição.
@@ -134,16 +138,16 @@ uv run pre-commit run --all-files
 ## Limitações
 
 - Não há autenticação, autorização nem multitenancy.
-- Não há upload, extração, fragmentação, embeddings, busca ou resposta fundamentada.
-- A migration ainda não cria tabelas de negócio e não fixa a dimensão dos embeddings.
+- Não há busca semântica nem resposta fundamentada.
+- PDF digitalizado, sem texto, é recusado. Não há OCR.
+- A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- A versão 0.1.0 descrita aqui ainda não foi publicada como release.
+- As versões 0.1.0 e 0.2.0 ainda não foram publicadas como release.
 
 ## Roadmap
 
-1. **v0.2.0 — Ingestão:** receber PDF textual, Markdown e TXT, fragmentar, gerar embeddings e persistir com estados verificáveis.
-2. **v0.3.0 — Recuperação:** consulta em linguagem natural, busca vetorial e resposta com referências verificáveis.
-3. **v0.4.0 — Experiência:** interface sobre os contratos estáveis da API.
+1. **v0.3.0 — Recuperação:** consulta em linguagem natural, busca vetorial e resposta com referências verificáveis.
+2. **v0.4.0 — Experiência:** interface sobre os contratos estáveis da API.
 
 Recuperação híbrida, reranking, autenticação e processamento assíncrono ficam para quando houver requisito concreto.

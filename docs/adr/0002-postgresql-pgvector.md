@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito
+Aceito. A 0.2.0 acrescentou as tabelas de documento e a coluna `vector(1536)`. A escolha de PostgreSQL, pgvector e SQLAlchemy síncrono permanece. Veja a [ADR 0004](0004-document-ingestion.md).
 
 ## Contexto
 

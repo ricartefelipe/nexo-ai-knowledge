@@ -3,6 +3,7 @@
 from enum import StrEnum
 from functools import lru_cache
 from typing import Self
+from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -42,6 +43,13 @@ class Settings(BaseSettings):
     db_max_overflow: int = Field(default=10, ge=0, le=50)
     db_pool_timeout: float = Field(default=30, gt=0, le=120)
     db_connect_timeout: int = Field(default=5, ge=1, le=60)
+    document_max_bytes: int = Field(default=10_485_760, ge=1, le=52_428_800)
+    document_chunk_size: int = Field(default=1000, ge=200, le=8000)
+    document_chunk_overlap: int = Field(default=200, ge=0, le=7999)
+    embedding_api_key: str = Field(default="", repr=False)
+    embedding_base_url: str = "https://api.openai.com/v1"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_timeout: float = Field(default=30, gt=0, le=120)
 
     @field_validator("app_env", mode="before")
     @classmethod
@@ -70,6 +78,38 @@ class Settings(BaseSettings):
             return normalized
         return value
 
+    @field_validator("embedding_api_key", mode="before")
+    @classmethod
+    def normalize_embedding_api_key(cls, value: object) -> object:
+        if isinstance(value, str):
+            if any(character in value for character in "\r\n"):
+                raise ValueError("EMBEDDING_API_KEY is invalid")
+            return value.strip()
+        return value
+
+    @field_validator("embedding_base_url", mode="before")
+    @classmethod
+    def normalize_embedding_base_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip().rstrip("/")
+            if any(character in stripped for character in "\r\n"):
+                raise ValueError("EMBEDDING_BASE_URL is invalid")
+            parsed = urlsplit(stripped)
+            if parsed.scheme not in {"http", "https"} or parsed.netloc == "":
+                raise ValueError("EMBEDDING_BASE_URL must be an http(s) URL")
+            return stripped
+        return value
+
+    @field_validator("embedding_model", mode="before")
+    @classmethod
+    def normalize_embedding_model(cls, value: object) -> object:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped == "" or any(character.isspace() for character in stripped):
+                raise ValueError("EMBEDDING_MODEL must be a single token")
+            return stripped
+        return value
+
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, value: str) -> str:
@@ -84,6 +124,12 @@ class Settings(BaseSettings):
         if not url.database:
             raise ValueError("DATABASE_URL must include a database name")
         return value
+
+    @model_validator(mode="after")
+    def validate_chunk_geometry(self) -> Self:
+        if self.document_chunk_overlap >= self.document_chunk_size:
+            raise ValueError("DOCUMENT_CHUNK_OVERLAP must be smaller than DOCUMENT_CHUNK_SIZE")
+        return self
 
     @model_validator(mode="after")
     def validate_production_constraints(self) -> Self:

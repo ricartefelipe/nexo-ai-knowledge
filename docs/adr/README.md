@@ -7,3 +7,4 @@ Uma decisão aceita descreve o código desta versão. Quando uma decisão mudar,
 | [0001](0001-modular-monolith.md) | Monólito modular, sem pacote de domínio vazio | Aceito |
 | [0002](0002-postgresql-pgvector.md) | PostgreSQL 16, pgvector e SQLAlchemy síncrono | Aceito |
 | [0003](0003-startup-without-llm.md) | A aplicação sobe sem provedor de modelo | Aceito |
+| [0004](0004-document-ingestion.md) | Ingestão com estados persistidos e embeddings | Aceito |

@@ -71,6 +71,24 @@ def read_document(
     return _response(document)
 
 
+@router.delete(
+    "/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={status.HTTP_404_NOT_FOUND: {"model": ProblemDetails}},
+)
+def delete_document(
+    document_id: UUID,
+    repository: Annotated[DocumentRepository, Depends(get_document_repository)],
+) -> Response:
+    """Remove one document with every fragment and vector derived from it."""
+    if not repository.delete(document_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="O documento não foi encontrado.",
+        )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 def _response(document: Document) -> DocumentResponse:
     return DocumentResponse(
         id=document.id,
@@ -80,4 +98,6 @@ def _response(document: Document) -> DocumentResponse:
         status=document.status,
         chunk_count=document.chunk_count,
         failure_detail=document.failure_detail,
+        embedding_model=document.embedding_model,
+        chunking_version=document.chunking_version,
     )

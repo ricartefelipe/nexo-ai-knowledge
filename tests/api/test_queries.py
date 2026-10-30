@@ -32,7 +32,7 @@ def test_query_returns_the_answer_and_the_source() -> None:
         document_id=uuid4(),
         filename="contrato.md",
         position=0,
-        content="O prazo é de 30 dias.",
+        content="O prazo de entrega é de 30 dias corridos.",
         distance=0.2,
     )
     with _client([source]) as client:
@@ -40,13 +40,15 @@ def test_query_returns_the_answer_and_the_source() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["grounded"] is True
-    assert body["answer"] == "O prazo é de 30 dias."
+    assert body["support"] == "supported"
+    assert body["sources_found"] is True
+    assert body["answer"] == "O prazo de entrega é de 30 dias corridos [1]."
     assert body["references"] == [
         {
             "document_id": str(source.document_id),
             "filename": "contrato.md",
             "position": 0,
-            "content": "O prazo é de 30 dias.",
+            "content": "O prazo de entrega é de 30 dias corridos.",
             "distance": 0.2,
         }
     ]
@@ -57,6 +59,8 @@ def test_query_without_sources_is_explicit() -> None:
         response = client.post("/api/v1/queries", json={"question": "qual o prazo?"})
     assert response.status_code == 200
     assert response.json()["grounded"] is False
+    assert response.json()["support"] == "no_sources"
+    assert response.json()["sources_found"] is False
     assert response.json()["references"] == []
     assert "não respondem" in response.json()["answer"]
 

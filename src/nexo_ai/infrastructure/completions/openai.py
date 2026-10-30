@@ -12,7 +12,8 @@ from nexo_ai.domain.retrieval import CompletionFailed, CompletionNotConfigured, 
 _SYSTEM_PROMPT = (
     "Responda em português usando somente as fontes numeradas. "
     "Se as fontes não contiverem a resposta, diga que as fontes não respondem. "
-    "Não invente fatos. Mencione o arquivo de cada fato usado."
+    "Não invente fatos. Cite cada fonte usada com o número entre colchetes, como [1]; "
+    "uma resposta sem citação será tratada como não sustentada."
 )
 
 

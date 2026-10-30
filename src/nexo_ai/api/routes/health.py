@@ -4,10 +4,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from nexo_ai.api.dependencies.health import get_readiness_probe
+from nexo_ai.api.dependencies.health import get_capabilities, get_readiness_probe
 from nexo_ai.api.schemas.health import LivenessResponse, ReadinessResponse
 from nexo_ai.api.schemas.problem import ProblemDetails
-from nexo_ai.infrastructure.persistence.health import ReadinessProbe
+from nexo_ai.infrastructure.persistence.health import Capabilities, ReadinessProbe
 
 router = APIRouter(tags=["health"])
 
@@ -36,10 +36,17 @@ def read_liveness() -> LivenessResponse:
 )
 def read_readiness(
     probe: Annotated[ReadinessProbe, Depends(get_readiness_probe)],
+    capabilities: Annotated[Capabilities, Depends(get_capabilities)],
 ) -> ReadinessResponse:
     """Report whether PostgreSQL and pgvector can serve the current API."""
 
     report = probe.check()
     if not report.ready:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=report.detail)
-    return ReadinessResponse(status="ready")
+    return ReadinessResponse(
+        status="ready",
+        database="ok",
+        embedding_provider="configured" if capabilities.embedding_provider else "not_configured",
+        completion_provider="configured" if capabilities.completion_provider else "not_configured",
+        embedding_model=capabilities.embedding_model,
+    )

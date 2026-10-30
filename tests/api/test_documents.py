@@ -1,12 +1,13 @@
 """Document HTTP contract."""
 
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
 from nexo_ai.api.dependencies.documents import get_document_repository, get_ingest_document
 from nexo_ai.application.ingest import IngestDocument
-from nexo_ai.domain.documents import DocumentStatus
+from nexo_ai.domain.documents import Document, DocumentStatus
 from nexo_ai.infrastructure.extraction.text import extract_document
 from nexo_ai.main import create_app
 from tests.conftest import build_settings
@@ -91,3 +92,28 @@ def test_missing_document_is_a_problem_document() -> None:
     assert response.headers["content-type"].startswith("application/problem+json")
     assert response.json()["detail"] == "O documento não foi encontrado."
     assert response.json()["instance"] == f"/api/v1/documents/{missing}"
+
+
+def test_delete_removes_the_document_and_reports_missing_ones() -> None:
+    repository = MemoryDocumentRepository()
+    app = create_app(build_settings())
+    app.dependency_overrides[get_document_repository] = lambda: repository
+    with TestClient(app) as client:
+        missing = client.delete(f"/api/v1/documents/{uuid4()}")
+        assert missing.status_code == 404
+        document = Document(
+            id=uuid4(),
+            filename="manual.md",
+            media_type="text/markdown",
+            content_sha256="a" * 64,
+            byte_size=10,
+            status=DocumentStatus.EMBEDDED,
+            failure_detail=None,
+            chunk_count=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        repository.add(document)
+        deleted = client.delete(f"/api/v1/documents/{document.id}")
+        assert deleted.status_code == 204
+        assert client.get(f"/api/v1/documents/{document.id}").status_code == 404

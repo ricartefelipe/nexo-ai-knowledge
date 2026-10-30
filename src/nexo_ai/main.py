@@ -5,9 +5,10 @@ from contextlib import asynccontextmanager
 
 import structlog
 import uvicorn
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
 from nexo_ai import __version__
+from nexo_ai.api.dependencies.auth import require_api_token
 from nexo_ai.api.handlers.errors import register_exception_handlers
 from nexo_ai.api.middleware.correlation import RequestContextMiddleware
 from nexo_ai.api.routes.documents import router as document_router
@@ -23,7 +24,7 @@ from nexo_ai.infrastructure.embeddings.openai import EMBEDDING_DIMENSIONS, build
 from nexo_ai.infrastructure.extraction.text import extract_document
 from nexo_ai.infrastructure.persistence.database import create_db_engine, create_session_factory
 from nexo_ai.infrastructure.persistence.documents import SqlDocumentRepository
-from nexo_ai.infrastructure.persistence.health import DatabaseReadinessProbe
+from nexo_ai.infrastructure.persistence.health import Capabilities, DatabaseReadinessProbe
 
 logger = structlog.get_logger()
 
@@ -41,7 +42,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session_factory = create_session_factory(engine)
         app.state.session_factory = session_factory
         app.state.readiness_probe = DatabaseReadinessProbe(engine)
-        repository = SqlDocumentRepository(session_factory)
+        app.state.capabilities = Capabilities(
+            embedding_provider=resolved.embedding_api_key != "",
+            completion_provider=resolved.completion_api_key != "",
+            embedding_model=resolved.embedding_model,
+        )
+        repository = SqlDocumentRepository(
+            session_factory, embedding_model=resolved.embedding_model
+        )
         app.state.document_repository = repository
         embeddings = build_embedding_client(resolved)
         app.state.ingest_document = IngestDocument(
@@ -52,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chunk_overlap=resolved.document_chunk_overlap,
             max_bytes=resolved.document_max_bytes,
             dimensions=EMBEDDING_DIMENSIONS,
+            embedding_model=resolved.embedding_model,
         )
         app.state.answer_question = AnswerQuestion(
             search=repository,
@@ -88,16 +97,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "Plataforma de conhecimento corporativo. A interface local e a API verificam "
             "a saúde do processo, ingerem PDF, Markdown e TXT e respondem perguntas com "
             "as fontes encontradas. Ingestão e consulta exigem provedor; a subida do "
-            "processo não exige. Não há autenticação: o uso previsto é local."
+            "processo não exige. Com API_AUTH_TOKEN configurado (obrigatório em "
+            "produção), documentos, consultas e interface exigem a credencial."
         ),
     )
     app.state.settings = resolved
     register_exception_handlers(app)
     app.add_middleware(RequestContextMiddleware)
-    app.include_router(interface_router)
+    protected = [Depends(require_api_token)]
+    app.include_router(interface_router, dependencies=protected)
     app.include_router(health_router)
-    app.include_router(document_router)
-    app.include_router(query_router)
+    app.include_router(document_router, dependencies=protected)
+    app.include_router(query_router, dependencies=protected)
     return app
 
 

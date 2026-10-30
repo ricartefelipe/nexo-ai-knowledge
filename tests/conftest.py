@@ -44,6 +44,7 @@ def build_settings(
     completion_api_key: str = "",
     document_chunk_size: int = 1000,
     document_chunk_overlap: int = 200,
+    api_auth_token: str = "",
 ) -> Settings:
     return Settings(
         _env_file=None,
@@ -57,4 +58,5 @@ def build_settings(
         completion_api_key=completion_api_key,
         document_chunk_size=document_chunk_size,
         document_chunk_overlap=document_chunk_overlap,
+        api_auth_token=api_auth_token,
     )

@@ -19,3 +19,7 @@ class ReadinessResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: Literal["ready"]
+    database: Literal["ok"]
+    embedding_provider: Literal["configured", "not_configured"]
+    completion_provider: Literal["configured", "not_configured"]
+    embedding_model: str

@@ -20,6 +20,10 @@ from nexo_ai.domain.text import ExtractedDocument
 logger = structlog.get_logger()
 
 
+# Bump when chunk_text changes how fragments are cut; documents keep the version that cut them.
+CHUNKING_VERSION = "v1"
+
+
 @dataclass(frozen=True, slots=True)
 class IngestResult:
     """Outcome of one upload. `created` is false when the same bytes were already stored."""
@@ -46,6 +50,10 @@ class DocumentRepository(Protocol):
     def replace_chunks(self, document_id: UUID, chunks: Sequence[TextChunk]) -> None:
         """Replace all fragments of a document. Embeddings are cleared."""
 
+    def delete(self, document_id: UUID) -> bool:
+        """Remove the document and every chunk and vector derived from it."""
+        ...
+
     def save_embeddings(self, document_id: UUID, embeddings: Sequence[Sequence[float]]) -> None:
         """Store one vector per fragment, in position order."""
 
@@ -63,6 +71,7 @@ class IngestDocument:
         chunk_overlap: int,
         max_bytes: int,
         dimensions: int,
+        embedding_model: str = "text-embedding-3-small",
     ) -> None:
         self._repository = repository
         self._embeddings = embeddings
@@ -71,6 +80,7 @@ class IngestDocument:
         self._chunk_overlap = chunk_overlap
         self._max_bytes = max_bytes
         self._dimensions = dimensions
+        self._embedding_model = embedding_model
 
     def execute(self, *, filename: str, content: bytes) -> IngestResult:
         """Ingest one file. A repeated hash of an embedded document is returned as-is."""
@@ -91,7 +101,11 @@ class IngestDocument:
 
         digest = hashlib.sha256(content).hexdigest()
         existing = self._repository.find_by_hash(digest)
-        if existing is not None and existing.status is DocumentStatus.EMBEDDED:
+        if (
+            existing is not None
+            and existing.status is DocumentStatus.EMBEDDED
+            and existing.embedding_model == self._embedding_model
+        ):
             return IngestResult(document=existing, created=False)
 
         now = datetime.now(UTC)
@@ -127,6 +141,8 @@ class IngestDocument:
             vectors = self._embeddings.embed([chunk.content for chunk in chunks])
             _require_vectors(vectors, len(chunks), self._dimensions)
             self._repository.save_embeddings(document.id, vectors)
+            document.embedding_model = self._embedding_model
+            document.chunking_version = CHUNKING_VERSION
             document.mark_embedded()
             self._repository.save(document)
         except DocumentError as exc:

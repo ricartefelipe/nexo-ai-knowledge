@@ -16,7 +16,7 @@ from tests.conftest import build_settings
 
 pytestmark = pytest.mark.integration
 
-_REVISION = "0002_create_documents"
+_REVISION = "0003_embedding_versioning"
 
 
 def _alembic_config() -> Config:
@@ -47,7 +47,13 @@ def test_migration_enables_vector_and_session_can_read(database_url: str) -> Non
     with TestClient(app) as client:
         response = client.get("/health/ready")
         assert response.status_code == 200
-        assert response.json() == {"status": "ready"}
+        assert response.json() == {
+            "status": "ready",
+            "database": "ok",
+            "embedding_provider": "not_configured",
+            "completion_provider": "not_configured",
+            "embedding_model": "text-embedding-3-small",
+        }
         factory: sessionmaker[Session] = app.state.session_factory
         session = factory()
         try:

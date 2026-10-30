@@ -1,6 +1,6 @@
 # Documentação
 
-Índice da versão 0.4.2, publicada em `main`. Cada documento descreve o que o repositório contém hoje.
+Índice da versão 0.5.0. Cada documento descreve o que o repositório contém hoje.
 
 ## Operação
 
@@ -11,7 +11,7 @@
 ## Arquitetura
 
 - [C4](architecture/c4.md) — contexto, contêineres e componentes que existem no processo.
-- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor, ingestão, consulta fundamentada e interface local.
+- [Decisões](adr/README.md) — monólito, persistência, subida sem provedor, ingestão, consulta fundamentada, interface local e identidade por token com status de sustentação.
 
 ## Código
 

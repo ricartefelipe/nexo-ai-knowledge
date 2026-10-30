@@ -78,8 +78,10 @@ jobs:
       - name: Unit and API tests
         run: uv run pytest tests/unit tests/api
 
-      - name: Audit dependencies
-        run: uv run pip-audit --progress-spinner off
+      - name: Audit the resolved runtime dependencies
+        run: |
+          uv export --frozen --no-dev --no-emit-project --no-hashes -o "${RUNNER_TEMP}/requirements.txt"
+          uv run pip-audit --progress-spinner off --no-deps -r "${RUNNER_TEMP}/requirements.txt"
 
   integration:
     name: integration
@@ -131,13 +133,10 @@ jobs:
         run: docker build -t nexo-ai:ci .
 
       - name: Scan the final image (HIGH and CRITICAL block)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
-        with:
-          image-ref: nexo-ai:ci
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          exit-code: "1"
-          format: table
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.76.1 image --scanners vuln --severity HIGH,CRITICAL \
+            --exit-code 1 --no-progress nexo-ai:ci
 
       - name: Smoke test the image against PostgreSQL
         run: |

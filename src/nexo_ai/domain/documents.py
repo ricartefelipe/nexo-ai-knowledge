@@ -58,6 +58,8 @@ class Document:
     chunk_count: int
     created_at: datetime
     updated_at: datetime
+    embedding_model: str | None = None
+    chunking_version: str | None = None
 
     def mark_extracted(self) -> None:
         self._move(DocumentStatus.RECEIVED, DocumentStatus.EXTRACTED)

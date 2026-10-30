@@ -16,13 +16,15 @@ from nexo_ai.domain.retrieval import SourceReference
 
 _SELECT_BY_HASH = """
     SELECT id, filename, media_type, content_sha256, byte_size, status,
-           failure_detail, chunk_count, created_at, updated_at
+                   failure_detail, chunk_count, created_at, updated_at,
+                   embedding_model, chunking_version
     FROM documents
     WHERE content_sha256 = :content_sha256
 """
 _SELECT_BY_ID = """
     SELECT id, filename, media_type, content_sha256, byte_size, status,
-           failure_detail, chunk_count, created_at, updated_at
+                   failure_detail, chunk_count, created_at, updated_at,
+                   embedding_model, chunking_version
     FROM documents
     WHERE id = :id
 """
@@ -37,6 +39,7 @@ _NEAREST_CHUNKS = """
         FROM document_chunks AS c
         JOIN documents AS d ON d.id = c.document_id
         WHERE d.status = 'embedded'
+          AND d.embedding_model = :embedding_model
           AND c.embedding IS NOT NULL
     ) AS ranked
     WHERE distance <= :max_distance
@@ -48,8 +51,13 @@ _NEAREST_CHUNKS = """
 class SqlDocumentRepository:
     """Store documents with SQLAlchemy sessions opened per operation."""
 
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(
+        self,
+        session_factory: sessionmaker[Session],
+        embedding_model: str = "text-embedding-3-small",
+    ) -> None:
         self._session_factory = session_factory
+        self._embedding_model = embedding_model
 
     def find_by_hash(self, content_sha256: str) -> Document | None:
         return self._fetch(_SELECT_BY_HASH, {"content_sha256": content_sha256})
@@ -62,10 +70,12 @@ class SqlDocumentRepository:
             """
             INSERT INTO documents (
                 id, filename, media_type, content_sha256, byte_size, status,
-                failure_detail, chunk_count, created_at, updated_at
+                failure_detail, chunk_count, created_at, updated_at,
+                embedding_model, chunking_version
             ) VALUES (
                 :id, :filename, :media_type, :content_sha256, :byte_size, :status,
-                :failure_detail, :chunk_count, :created_at, :updated_at
+                :failure_detail, :chunk_count, :created_at, :updated_at,
+                :embedding_model, :chunking_version
             )
             """
         )
@@ -80,7 +90,9 @@ class SqlDocumentRepository:
                 status = :status,
                 failure_detail = :failure_detail,
                 chunk_count = :chunk_count,
-                updated_at = :updated_at
+                updated_at = :updated_at,
+                embedding_model = :embedding_model,
+                chunking_version = :chunking_version
             WHERE id = :id
             """
         )
@@ -130,6 +142,15 @@ class SqlDocumentRepository:
                     raise EmbeddingFailed("O fragmento não está disponível para receber o vetor.")
             session.commit()
 
+    def delete(self, document_id: UUID) -> bool:
+        with self._session_factory() as session:
+            deleted = session.execute(
+                text("DELETE FROM documents WHERE id = :document_id RETURNING id"),
+                {"document_id": document_id},
+            ).scalar_one_or_none()
+            session.commit()
+        return deleted is not None
+
     def nearest_chunks(
         self,
         embedding: Sequence[float],
@@ -137,6 +158,8 @@ class SqlDocumentRepository:
         limit: int,
         max_distance: float,
     ) -> list[SourceReference]:
+        # Only fragments embedded by the model in use are comparable; mixing models or
+        # dimensions would rank unrelated vectors against each other.
         with self._session_factory() as session:
             rows = (
                 session.execute(
@@ -145,6 +168,7 @@ class SqlDocumentRepository:
                         "embedding": _vector_literal(embedding),
                         "max_distance": max_distance,
                         "limit": limit,
+                        "embedding_model": self._embedding_model,
                     },
                 )
                 .mappings()
@@ -177,6 +201,8 @@ def _document_params(document: Document) -> dict[str, object]:
         "chunk_count": document.chunk_count,
         "created_at": document.created_at,
         "updated_at": document.updated_at,
+        "embedding_model": document.embedding_model,
+        "chunking_version": document.chunking_version,
     }
 
 
@@ -192,6 +218,8 @@ def _to_document(row: Mapping[str, Any]) -> Document:
         chunk_count=_as_int(row["chunk_count"]),
         created_at=_as_datetime(row["created_at"]),
         updated_at=_as_datetime(row["updated_at"]),
+        embedding_model=_as_optional_str(row.get("embedding_model")),
+        chunking_version=_as_optional_str(row.get("chunking_version")),
     )
 
 

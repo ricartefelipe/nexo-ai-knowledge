@@ -58,6 +58,8 @@ def _document(
     document.mark_extracted()
     repository.save(document)
     document.mark_chunked(1)
+    document.embedding_model = "text-embedding-3-small"
+    document.chunking_version = "v1"
     repository.replace_chunks(document.id, [TextChunk(position=0, content=content)])
     repository.save(document)
     repository.save_embeddings(document.id, [vector])
@@ -74,7 +76,7 @@ def test_query_returns_the_nearest_indexed_fragment(database_url: str) -> None:
     near = [1.0] * EMBEDDING_DIMENSIONS
     far = [-1.0] * EMBEDDING_DIMENSIONS
     embeddings = _FixedEmbedding(near)
-    completion = ScriptedCompletionClient("O prazo é de 30 dias.")
+    completion = ScriptedCompletionClient("O prazo de entrega é de 30 dias corridos [1].")
     use_case = AnswerQuestion(
         search=repository,
         embeddings=embeddings,
@@ -90,7 +92,7 @@ def test_query_returns_the_nearest_indexed_fragment(database_url: str) -> None:
         with engine.begin() as connection:
             connection.execute(text("DELETE FROM document_chunks"))
             connection.execute(text("DELETE FROM documents"))
-        _document("contrato.md", "O prazo é de 30 dias.", near, repository)
+        _document("contrato.md", "O prazo de entrega é de 30 dias corridos.", near, repository)
         _document("outro.md", "A sede fica em outra cidade.", far, repository)
         with TestClient(app) as client:
             response = client.post("/api/v1/queries", json={"question": "qual o prazo?"})
@@ -100,9 +102,64 @@ def test_query_returns_the_nearest_indexed_fragment(database_url: str) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["grounded"] is True
-    assert body["answer"] == "O prazo é de 30 dias."
+    assert body["support"] == "supported"
+    assert body["answer"] == "O prazo de entrega é de 30 dias corridos [1]."
     assert len(body["references"]) == 1
     assert body["references"][0]["filename"] == "contrato.md"
-    assert body["references"][0]["content"] == "O prazo é de 30 dias."
+    assert body["references"][0]["content"] == "O prazo de entrega é de 30 dias corridos."
     assert body["references"][0]["distance"] == pytest.approx(0, abs=1e-6)
     assert completion.calls[-1][1][0].filename == "contrato.md"
+
+
+def test_fragments_from_another_embedding_model_are_not_matched(database_url: str) -> None:
+    """Vectors from a different model are not comparable; the search ignores them."""
+    get_settings.cache_clear()
+    command.upgrade(Config("alembic.ini"), "head")
+    settings = build_settings(database_url=database_url)
+    engine = create_db_engine(settings)
+    current = SqlDocumentRepository(create_session_factory(engine), embedding_model="model-b")
+    near = [1.0] * EMBEDDING_DIMENSIONS
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("DELETE FROM document_chunks"))
+            connection.execute(text("DELETE FROM documents"))
+        _document("antigo.md", "O prazo de entrega é de 30 dias corridos.", near, current)
+        with engine.begin() as connection:
+            connection.execute(
+                text("UPDATE documents SET embedding_model = 'model-a' WHERE filename = :name"),
+                {"name": "antigo.md"},
+            )
+        assert current.nearest_chunks(near, limit=5, max_distance=0.5) == []
+        legacy = SqlDocumentRepository(create_session_factory(engine), embedding_model="model-a")
+        assert len(legacy.nearest_chunks(near, limit=5, max_distance=0.5)) == 1
+    finally:
+        engine.dispose()
+
+
+def test_delete_removes_document_chunks_and_vectors(database_url: str) -> None:
+    get_settings.cache_clear()
+    command.upgrade(Config("alembic.ini"), "head")
+    settings = build_settings(database_url=database_url)
+    engine = create_db_engine(settings)
+    repository = SqlDocumentRepository(create_session_factory(engine))
+    near = [1.0] * EMBEDDING_DIMENSIONS
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("DELETE FROM document_chunks"))
+            connection.execute(text("DELETE FROM documents"))
+        _document("apagar.md", "O prazo de entrega é de 30 dias corridos.", near, repository)
+        assert len(repository.nearest_chunks(near, limit=5, max_distance=0.5)) == 1
+        document_id = repository.nearest_chunks(near, limit=5, max_distance=0.5)[0].document_id
+
+        assert repository.delete(document_id) is True
+        assert repository.delete(document_id) is False
+        assert repository.get(document_id) is None
+        assert repository.nearest_chunks(near, limit=5, max_distance=0.5) == []
+        with engine.begin() as connection:
+            remaining: int = connection.execute(
+                text("SELECT count(*) FROM document_chunks WHERE document_id = :id"),
+                {"id": document_id},
+            ).scalar_one()
+        assert remaining == 0
+    finally:
+        engine.dispose()

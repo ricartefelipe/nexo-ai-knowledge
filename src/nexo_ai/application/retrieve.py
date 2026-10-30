@@ -8,7 +8,14 @@ import structlog
 
 from nexo_ai.application.embeddings import EmbeddingClient
 from nexo_ai.domain.documents import DocumentError
-from nexo_ai.domain.retrieval import Answer, CompletionFailed, RetrievalError, SourceReference
+from nexo_ai.domain.retrieval import (
+    Answer,
+    CompletionFailed,
+    RetrievalError,
+    SourceReference,
+    SupportStatus,
+)
+from nexo_ai.domain.support import assess_support
 
 logger = structlog.get_logger()
 
@@ -81,20 +88,21 @@ class AnswerQuestion:
                 )
             )
             if not matches:
-                answer = Answer(text=_NO_SOURCE, grounded=False, references=())
-                _log_answer(answer, started, result="ungrounded")
+                answer = Answer(text=_NO_SOURCE, support=SupportStatus.NO_SOURCES, references=())
+                _log_answer(answer, started, result="no_sources")
                 return answer
             text = self._completion.complete(question=cleaned, references=matches)
             if text.strip() == "":
                 raise CompletionFailed("O provedor de linguagem devolveu uma resposta vazia.")
-            answer = Answer(text=text.strip(), grounded=True, references=matches)
+            support = assess_support(text, matches)
+            answer = Answer(text=text.strip(), support=support, references=matches)
         except DocumentError as exc:
             _log_answer(None, started, result="error")
             raise exc
         except Exception as exc:
             _log_answer(None, started, result="error", error_type=type(exc).__name__)
             raise RetrievalError("A consulta falhou.") from None
-        _log_answer(answer, started, result="ok")
+        _log_answer(answer, started, result=answer.support.value)
         return answer
 
 

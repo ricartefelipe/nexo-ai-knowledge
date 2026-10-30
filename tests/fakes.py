@@ -35,6 +35,12 @@ class MemoryDocumentRepository:
         self.chunks[document_id] = list(chunks)
         self.embeddings.pop(document_id, None)
 
+    def delete(self, document_id: UUID) -> bool:
+        removed = self.documents.pop(document_id, None) is not None
+        self.chunks.pop(document_id, None)
+        self.embeddings.pop(document_id, None)
+        return removed
+
     def save_embeddings(self, document_id: UUID, embeddings: Sequence[Sequence[float]]) -> None:
         self.embeddings[document_id] = [list(vector) for vector in embeddings]
 
@@ -89,7 +95,7 @@ class MemoryChunkSearch:
 class ScriptedCompletionClient:
     """Return a fixed answer and record the sources it was given."""
 
-    def __init__(self, answer: str = "O prazo é de 30 dias.") -> None:
+    def __init__(self, answer: str = "O prazo de entrega é de 30 dias corridos [1].") -> None:
         self.answer = answer
         self.calls: list[tuple[str, tuple[SourceReference, ...]]] = []
 

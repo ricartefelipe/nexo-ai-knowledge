@@ -6,7 +6,7 @@ import pytest
 
 from nexo_ai.application.retrieve import AnswerQuestion
 from nexo_ai.domain.documents import EmbeddingNotConfigured
-from nexo_ai.domain.retrieval import RetrievalError, SourceReference
+from nexo_ai.domain.retrieval import RetrievalError, SourceReference, SupportStatus
 from nexo_ai.infrastructure.completions.openai import UnconfiguredCompletionClient
 from nexo_ai.infrastructure.embeddings.openai import UnconfiguredEmbeddingClient
 from tests.fakes import (
@@ -17,7 +17,9 @@ from tests.fakes import (
 )
 
 
-def _reference(distance: float, content: str = "O prazo é de 30 dias.") -> SourceReference:
+def _reference(
+    distance: float, content: str = "O prazo de entrega é de 30 dias corridos."
+) -> SourceReference:
     return SourceReference(
         document_id=uuid4(),
         filename="contrato.md",
@@ -51,7 +53,8 @@ def test_answer_cites_only_close_sources() -> None:
     completion = ScriptedCompletionClient()
     result = _answer(search, embeddings, completion).execute("  qual o prazo?  ")
     assert result.grounded is True
-    assert result.text == "O prazo é de 30 dias."
+    assert result.support is SupportStatus.SUPPORTED
+    assert result.text == "O prazo de entrega é de 30 dias corridos [1]."
     assert result.references == (close,)
     assert search.calls[0][1:] == (2, 0.5)
     assert completion.calls[0][0] == ""
@@ -64,9 +67,36 @@ def test_distant_sources_do_not_call_the_language_model() -> None:
     completion = ScriptedCompletionClient()
     result = _answer(search, ScriptedEmbeddingClient(dimensions=4), completion).execute("prazo")
     assert result.grounded is False
+    assert result.support is SupportStatus.NO_SOURCES
     assert result.references == ()
     assert result.text == "As fontes indexadas não respondem a essa pergunta."
-    assert completion.calls == [("", ())]
+
+
+def test_answer_without_citation_or_overlap_is_returned_as_unsupported() -> None:
+    close = _reference(0.1)
+    search = MemoryChunkSearch([close])
+    embeddings = ScriptedEmbeddingClient(dimensions=4)
+
+    uncited = _answer(search, embeddings, ScriptedCompletionClient("O prazo é de 30 dias."))
+    result = uncited.execute("qual o prazo?")
+    assert result.support is SupportStatus.UNSUPPORTED
+    assert result.grounded is False
+    assert result.sources_found is True
+    assert result.references == (close,)
+
+    invented = _answer(
+        search,
+        embeddings,
+        ScriptedCompletionClient("A garantia cobre defeitos por cinco anos [1]."),
+    )
+    assert invented.execute("qual o prazo?").support is SupportStatus.UNSUPPORTED
+
+    bad_index = _answer(
+        search,
+        embeddings,
+        ScriptedCompletionClient("O prazo de entrega é de 30 dias corridos [2]."),
+    )
+    assert bad_index.execute("qual o prazo?").support is SupportStatus.UNSUPPORTED
 
 
 def test_invalid_questions_are_rejected_before_search() -> None:

@@ -10,3 +10,4 @@ Uma decisão aceita descreve o código desta versão. Quando uma decisão mudar,
 | [0004](0004-document-ingestion.md) | Ingestão com estados persistidos e embeddings | Aceito |
 | [0005](0005-grounded-retrieval.md) | Consulta fundamentada nos fragmentos indexados | Aceito |
 | [0006](0006-local-interface.md) | Interface local no mesmo processo | Aceito |
+| [0007](0007-remote-identity-and-support.md) | Identidade por token no modo remoto e status de sustentação | Aceito |

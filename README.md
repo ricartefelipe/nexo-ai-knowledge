@@ -2,7 +2,7 @@
 
 Uma plataforma inteligente que transforma informações dispersas em conhecimento acessível, ajudando pessoas e equipes a encontrar respostas, compreender decisões e consultar fontes confiáveis.
 
-Nesta versão, **0.4.2 publicada em `main`**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis e a interface local. O arranque é `docker compose up --build`, sem criar arquivo. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte da tag `v0.4.0` e não têm tag própria.
+Nesta versão, **0.5.0**, o repositório entrega a fundação, a ingestão, a consulta com fontes verificáveis, a interface local, a identidade por token para o modo remoto, o status de sustentação da resposta e a exclusão de documentos. O arranque é `docker compose up --build`, sem criar arquivo. A 0.1.0, a 0.2.0 e a 0.3.0 fazem parte da tag `v0.4.0` e não têm tag própria.
 
 ## Problema
 
@@ -20,6 +20,10 @@ Informações organizacionais ficam espalhadas em documentos e registros. Pessoa
 - Persiste o estágio do documento: recebido, extraído, fragmentado, indexado ou falha.
 - Responde uma pergunta a partir dos fragmentos indexados e devolve esses fragmentos junto da resposta.
 - Serve uma página local em `/` para enviar documentos, consultar o estágio e fazer perguntas. A página chama a API no mesmo processo.
+- Exige um token (`API_AUTH_TOKEN`) nas rotas de documentos, consultas e na página quando o processo é exposto fora do perfil local.
+- Classifica cada resposta como `supported`, `unsupported` ou `no_sources`, conferindo a citação `[n]` e a sobreposição com as fontes.
+- Exclui um documento com seus fragmentos e vetores.
+- Registra o modelo de embedding e a versão de fragmentação de cada documento; a busca só compara vetores do modelo configurado.
 
 ## Arquitetura
 
@@ -57,7 +61,13 @@ docker compose up --build
 
 A interface fica em `http://127.0.0.1:8000/`. O mesmo comando está em `./scripts/start.sh`. O contêiner aplica as migrations. Sem chave de provedor, a página abre e a operação que precisar de chave avisa isso.
 
-`APP_ENV=production` recusa URL de banco sem host ou senha e recusa escutar em todas as interfaces.
+## Modos de execução
+
+- **Local** (`APP_ENV=local`, padrão do Compose): sem token, a API atende somente quem chega ao processo. Com `API_AUTH_TOKEN` definido, o token passa a ser exigido.
+- **Remoto** (`APP_ENV=test` ou `production` escutando em `0.0.0.0` ou `::`): `API_AUTH_TOKEN` é obrigatório. O processo recusa iniciar sem ele.
+- `APP_ENV=production` também recusa URL de banco sem host ou senha, recusa escutar em todas as interfaces e exige token com pelo menos 32 caracteres.
+
+O token é enviado em `Authorization: Bearer <token>` ou `X-Api-Key: <token>`. Sem token ou com token diferente, a resposta é `401`. As rotas de saúde não exigem token.
 
 ## Execução no host
 
@@ -74,14 +84,15 @@ O healthcheck da imagem consulta `/health/live`. O healthcheck do Compose consul
 
 ## API
 
-Não há autenticação. Esta API não está pronta para exposição pública.
+A autenticação é por token compartilhado, descrita em [Modos de execução](#modos-de-execução). Não há usuários, papéis nem multitenancy.
 
 - `GET /` — página local. Não entra no OpenAPI.
 - `GET /health/live` — o processo responde. Não consulta o banco.
-- `GET /health/ready` — o PostgreSQL responde e a extensão `vector` está instalada.
+- `GET /health/ready` — o PostgreSQL responde e a extensão `vector` está instalada. O corpo informa `database`, `embedding_provider`, `completion_provider` (`configured` ou `not_configured`) e `embedding_model`. Provedor ausente não derruba a prontidão: o processo atende, mas ingestão e consulta respondem que o provedor não está configurado.
 - `POST /api/v1/documents` — envia um arquivo no campo `file`. PDF, Markdown ou TXT.
-- `GET /api/v1/documents/{id}` — mostra o estágio da ingestão, sem o texto dos fragmentos e sem os vetores.
-- `POST /api/v1/queries` — corpo `{"question": "..."}`. Responde com `answer`, `grounded` e `references`.
+- `GET /api/v1/documents/{id}` — mostra o estágio da ingestão, o `embedding_model` e a `chunking_version`, sem o texto dos fragmentos e sem os vetores.
+- `DELETE /api/v1/documents/{id}` — remove o documento, os fragmentos e os vetores. Responde `204`; inexistente responde `404`.
+- `POST /api/v1/queries` — corpo `{"question": "..."}`. Responde com `answer`, `support`, `grounded`, `sources_found` e `references`.
 
 O contrato interativo está em `/docs`.
 
@@ -93,6 +104,8 @@ curl -fsS -H "Content-Type: application/json" \
   -d '{"question":"qual o prazo?"}' \
   http://127.0.0.1:8000/api/v1/queries
 ```
+
+`support` distingue três situações. `no_sources`: nenhum fragmento indexado ficou dentro de `QUERY_MAX_DISTANCE`; `sources_found` é `false`, `references` fica vazio e o modelo de linguagem não é chamado. `unsupported`: houve fontes, mas a resposta do modelo não cita `[n]` válido ou não compartilha termos com a fonte citada; `grounded` é `false` e as referências são devolvidas para leitura. `supported`: a resposta cita uma fonte devolvida e compartilha termos com ela; só então `grounded` é `true`. A verificação é lexical, não semântica.
 
 Quando nenhum fragmento indexado fica dentro de `QUERY_MAX_DISTANCE`, a resposta é `200`, `grounded` é `false`, `references` fica vazio e o modelo de linguagem não é chamado. O texto fixo é `As fontes indexadas não respondem a essa pergunta.` Quando há fonte, cada referência traz `document_id`, `filename`, `position`, `content` e `distance`. A consulta não é gravada.
 
@@ -127,6 +140,8 @@ uv run pytest --cov-fail-under=85
 uv run pip-audit --progress-spinner off
 ```
 
+A imagem final é construída e escaneada na CI com Trivy; qualquer vulnerabilidade HIGH ou CRITICAL bloqueia. Localmente: `docker build -t nexo-ai:local .` e `trivy image --severity HIGH,CRITICAL --exit-code 1 nexo-ai:local`.
+
 Os testes de integração aplicam a migration, verificam a extensão, consultam a readiness e comprovam que o downgrade sem `CASCADE` falha enquanto existir uma coluna `vector`. A suíte restaura a extensão ao final.
 
 A cobertura exigida é 85% do pacote `nexo_ai`, com medição de ramos, sem omissão de módulos. O percentual medido deve ser lido no relatório do pytest, não neste documento.
@@ -140,15 +155,17 @@ uv run pre-commit run --all-files
 
 ## Limitações
 
-- Não há autenticação, autorização nem multitenancy.
+- A autenticação é um token compartilhado. Não há usuários, papéis nem multitenancy.
+- A verificação de sustentação é lexical: cita uma fonte e compartilha termos com ela. Uma resposta pode citar a fonte e ainda assim interpretá-la mal.
+- A troca de `EMBEDDING_MODEL` exige reindexar: documentos de outro modelo deixam de aparecer na busca e ficam identificados em `embedding_model`.
 - A interface não lista o acervo. Ela mostra o documento enviado nesta página e a resposta da pergunta.
 - Uma resposta sem fonte próxima não inventa citação.
 - PDF digitalizado, sem texto, é recusado. Não há OCR.
 - A coluna vetorial está fixada em 1536 dimensões para `text-embedding-3-small`. Não há índice ANN.
 - Métricas e OpenTelemetry não estão ativos.
 - As credenciais do Compose são de desenvolvimento. Não as reutilize fora da máquina local.
-- A tag atual é `v0.4.2`. As tags `v0.4.0` e `v0.4.1` continuam publicadas. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
+- A tag atual é `v0.5.0`. As tags `v0.4.0`, `v0.4.1` e `v0.4.2` continuam publicadas. As versões 0.1.0, 0.2.0 e 0.3.0 não têm tag própria.
 
 ## Roadmap
 
-Recuperação híbrida, reranking, autenticação e processamento assíncrono ficam para quando houver requisito concreto. Não há próximo incremento aberto.
+Recuperação híbrida, reranking, usuários com papéis e processamento assíncrono ficam para quando houver requisito concreto. Não há próximo incremento aberto.

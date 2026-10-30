@@ -82,3 +82,23 @@ def test_openapi_exposes_the_implemented_routes() -> None:
         "/api/v1/documents/{document_id}",
         "/api/v1/queries",
     }
+
+
+def test_readiness_reports_which_providers_are_configured_without_keys() -> None:
+    class _ReadyProbe:
+        def check(self) -> ReadinessReport:
+            return ReadinessReport(ready=True, detail="")
+
+    app = create_app(build_settings(embedding_api_key="embedding-secret-key"))
+    app.dependency_overrides[get_readiness_probe] = _ReadyProbe
+    with TestClient(app) as client:
+        response = client.get("/health/ready")
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "database": "ok",
+        "embedding_provider": "configured",
+        "completion_provider": "not_configured",
+        "embedding_model": "text-embedding-3-small",
+    }
+    assert "embedding-secret-key" not in response.text

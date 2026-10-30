@@ -19,3 +19,5 @@ class DocumentResponse(BaseModel):
     status: DocumentStatus
     chunk_count: int
     failure_detail: str | None
+    embedding_model: str | None = None
+    chunking_version: str | None = None

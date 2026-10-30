@@ -13,6 +13,7 @@ from sqlalchemy.exc import ArgumentError
 _WILDCARD_HOSTS = {"0.0.0.0", "::", "[::]"}  # noqa: S104
 _LOG_LEVELS = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"}
 _POSTGRES_DRIVER = "postgresql+psycopg"
+_MIN_API_TOKEN_LENGTH = 32
 
 
 class AppEnvironment(StrEnum):
@@ -36,6 +37,7 @@ class Settings(BaseSettings):
 
     app_env: AppEnvironment = AppEnvironment.LOCAL
     app_host: str = "127.0.0.1"
+    api_auth_token: str = Field(default="", repr=False)
     app_port: int = Field(default=8000, ge=1, le=65535)
     log_level: str = "INFO"
     database_url: str = Field(repr=False)
@@ -83,6 +85,15 @@ class Settings(BaseSettings):
             if normalized not in _LOG_LEVELS:
                 raise ValueError("LOG_LEVEL must be CRITICAL, ERROR, WARNING, INFO, or DEBUG")
             return normalized
+        return value
+
+    @field_validator("api_auth_token", mode="before")
+    @classmethod
+    def normalize_api_auth_token(cls, value: object) -> object:
+        if isinstance(value, str):
+            if any(character.isspace() for character in value.strip()):
+                raise ValueError("API_AUTH_TOKEN must not contain whitespace")
+            return value.strip()
         return value
 
     @field_validator("embedding_api_key", mode="before")
@@ -159,7 +170,26 @@ class Settings(BaseSettings):
             raise ValueError("production DATABASE_URL requires a password")
         if self.app_host in _WILDCARD_HOSTS:
             raise ValueError("production APP_HOST must not listen on all interfaces")
+        if len(self.api_auth_token) < _MIN_API_TOKEN_LENGTH:
+            raise ValueError(
+                "production requires API_AUTH_TOKEN with at least "
+                f"{_MIN_API_TOKEN_LENGTH} characters"
+            )
         return self
+
+    @model_validator(mode="after")
+    def validate_exposed_host_requires_identity(self) -> Self:
+        """Listening beyond loopback outside the local profile needs a credential."""
+
+        if self.app_env is AppEnvironment.LOCAL:
+            return self
+        if self.app_host in _WILDCARD_HOSTS and self.api_auth_token == "":
+            raise ValueError("APP_HOST on all interfaces requires API_AUTH_TOKEN outside local")
+        return self
+
+    @property
+    def api_auth_enabled(self) -> bool:
+        return self.api_auth_token != ""
 
 
 @lru_cache(maxsize=1)

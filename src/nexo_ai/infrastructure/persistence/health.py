@@ -76,3 +76,12 @@ class DatabaseReadinessProbe:
             duration_ms=duration_ms,
         )
         return ReadinessReport(ready=True, detail="O banco de dados está pronto.")
+
+
+@dataclass(frozen=True, slots=True)
+class Capabilities:
+    """What the process can actually do beyond serving health: reported without secrets."""
+
+    embedding_provider: bool
+    completion_provider: bool
+    embedding_model: str

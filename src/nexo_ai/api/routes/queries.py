@@ -39,6 +39,8 @@ def _response(answer: Answer) -> QueryResponse:
     return QueryResponse(
         answer=answer.text,
         grounded=answer.grounded,
+        support=answer.support.value,
+        sources_found=answer.sources_found,
         references=[
             ReferenceResponse(
                 document_id=source.document_id,

@@ -1,5 +1,6 @@
 """HTTP schemas for grounded questions."""
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,4 +33,6 @@ class QueryResponse(BaseModel):
 
     answer: str
     grounded: bool
+    support: Literal["no_sources", "supported", "unsupported"]
+    sources_found: bool
     references: list[ReferenceResponse]

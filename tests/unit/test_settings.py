@@ -122,12 +122,33 @@ def test_production_requires_host_password_and_specific_interface() -> None:
         )
     assert "super-secret" not in str(wildcard_host.value)
 
+    with pytest.raises(ValidationError) as missing_token:
+        build_settings(
+            app_env="production",
+            app_host="10.0.0.8",
+            database_url="postgresql+psycopg://nexo:super-secret@db.internal:5432/nexo",
+        )
+    assert "API_AUTH_TOKEN" in str(missing_token.value)
+    assert "super-secret" not in str(missing_token.value)
+
     settings = build_settings(
         app_env="production",
         app_host="10.0.0.8",
         database_url="postgresql+psycopg://nexo:super-secret@db.internal:5432/nexo",
+        api_auth_token="x" * 32,
     )
     assert settings.app_env is AppEnvironment.PRODUCTION
+    assert settings.api_auth_enabled is True
+    assert "xxxx" not in repr(settings)
+
+
+def test_listening_on_all_interfaces_outside_local_requires_a_token() -> None:
+    with pytest.raises(ValidationError):
+        build_settings(app_env="test", app_host="0.0.0.0")
+    exposed = build_settings(app_env="test", app_host="0.0.0.0", api_auth_token="t" * 32)
+    assert exposed.api_auth_enabled is True
+    local = build_settings(app_env="local", app_host="0.0.0.0")
+    assert local.api_auth_enabled is False
 
 
 def test_embedding_settings_hide_the_key_and_reject_bad_urls() -> None:

@@ -118,3 +118,50 @@ jobs:
 
       - name: Test with coverage
         run: uv run pytest --cov-fail-under=85
+
+  image:
+    name: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the final image
+        run: docker build -t nexo-ai:ci .
+
+      - name: Scan the final image (HIGH and CRITICAL block)
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        with:
+          image-ref: nexo-ai:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table
+
+      - name: Smoke test the image against PostgreSQL
+        run: |
+          set -eu
+          docker network create nexo-ci
+          docker run -d --name db --network nexo-ci \
+            -e POSTGRES_USER=nexo -e POSTGRES_PASSWORD=nexo -e POSTGRES_DB=nexo \
+            --health-cmd "pg_isready -U nexo -d nexo" --health-interval 2s --health-retries 30 \
+            pgvector/pgvector:0.8.7-pg16
+          for _ in $(seq 1 30); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' db)" = healthy ] && break
+            sleep 2
+          done
+          docker run -d --name api --network nexo-ci -p 127.0.0.1:8000:8000 \
+            -e APP_ENV=test -e APP_HOST=0.0.0.0 \
+            -e DATABASE_URL=postgresql+psycopg://nexo:nexo@db:5432/nexo \
+            -e API_AUTH_TOKEN=ci-token-0123456789abcdefghijklmnopqrstuv \
+            nexo-ai:ci
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/health/ready >/dev/null 2>&1 && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/health/ready
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+            -d '{"question":"teste"}' http://127.0.0.1:8000/api/v1/queries)
+          [ "$code" = 401 ] || { echo "esperava 401 sem token, obteve $code" >&2; exit 1; }
+          docker logs api | tail -20
